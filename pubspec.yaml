@@ -1,0 +1,16 @@
+name: location_protocol
+description: >-
+  Schema-agnostic Dart library implementing the Location Protocol base data
+  model on the Ethereum Attestation Service (EAS).
+version: 0.1.0
+repository: https://github.com/DecentralizedGeo/location-protocol-dart
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+  on_chain: ^7.1.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^4.0.0
