@@ -7,9 +7,9 @@ export 'src/lp/lp_payload.dart';
 export 'src/lp/location_serializer.dart';
 
 // Schema layer
-// export 'src/schema/schema_field.dart';
-// export 'src/schema/schema_definition.dart';
-// export 'src/schema/schema_uid.dart';
+export 'src/schema/schema_field.dart';
+export 'src/schema/schema_definition.dart';
+export 'src/schema/schema_uid.dart';
 
 // EAS layer
 // export 'src/eas/constants.dart';
