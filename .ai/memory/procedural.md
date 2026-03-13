@@ -11,7 +11,27 @@
 - **KECCAK256 / Crypto**:
   - Use `QuickCrypto.keccack256Hash(Uint8List)` from `blockchain_utils` for pure Dart hashing.
   - Use `BytesUtils` for hex/Uint8List conversions.
+  - **EIP-712 Signing**: Use `hashMessage: false` when signing a pre-computed EIP-712 digest (already hashed).
+  - **Manual Transaction Construction**: When using pre-encoded ABI payloads with `on_chain` v7.1.0, bypass the high-level `ETHTransactionBuilder` for `autoFill` if you need to set the raw `data` field. Instead:
+    - 1. Fetch `nonce`, `gasPrice`/`maxFeePerGas`, and `gasLimit` using `EthereumProvider`.
+    - 2. Construct `ETHTransaction.legacy()` or `ETHTransaction.eip1559()`.
+    - 3. Use `tx.fillTransaction(...)` with the fetched parameters.
+    - 4. Use `builder.sign(key)` ensuring `builder.transaction` is the manually filled instance.
+  - **Prefer `ETHTransactionBuilder` for High-level**: Use `builder.autoFill(provider)` ONLY when calling standard methods that the builder supports (like contract calls with `AbiFunctionFragment` where parameters are passed, not raw data).
+  - **Encoding**: Use `ByteData` with `Endian.big` for explicit `uint16`, `uint32`, or `uint64` byte conversions.
+  - **Nested Tuple Encoding**: For structs composed of other structs (like `AttestationRequest` containing `AttestationRequestData`), `on_chain`'s ABI encoder requires passing nested `List` structures that exactly align with the fragment's `components` array.
+  - **ABI Output Parsing**: Results from `eth_call` via `AbiFunctionFragment.decodeOutput` return dynamic types. For nested or complex structs, manually cast components (e.g., check `if (value is BigInt) value else BigInt.from(value)`, cast `List<int>` to `Uint8List`) before hydrating Dart models.
 
 ### Pitfalls to Avoid
 - **ABI Encoding Location**: Do not try to ABI encode a `Map` or `List` directly for the `location` field; serialize to a JSON string first.
 - **Reserved Names**: User-defined fields must not collide with `lp_version`, `srs`, `location_type`, or `location`.
+
+### Offchain UID (v2) Packed Encoding Layout
+- **Order**: `version(uint16) | schemaUID(bytes32) | recipient(address) | attester(0x0 address) | time(uint64) | expirationTime(uint64) | revocable(bool) | refUID(bytes32) | data(bytes) | salt(bytes32) | zero(uint32)`.
+- **Note**: Ensure `time` and `expirationTime` are big-endian 8-byte arrays. `revocable` is a single byte (0 or 1).
+- **Zero Padding**: Signature `r` and `s` components MUST be zero-padded to 32 bytes each before concatenating with `v` for recovery.
+
+### Dependency & Encoding Quirks
+- **`blockchain_utils` Versioning**: When using `on_chain ^7.1.0`, explicitly declare `blockchain_utils: ^5.4.0` in `pubspec.yaml` to avoid version solver conflicts with the library's transitive requirements.
+- **ABI `bytes32` Encoding**: Never pass hex strings directly to `on_chain`'s `Fragment.encode` for `bytes32` parameters. Always convert to `Uint8List` using `BytesUtils.fromHexString(uid.replaceAll('0x', ''))`.
+- **Test Secrets**: Use `.env` file (loaded by `test/test_helpers/dotenv_loader.dart`) for RPC URLs and private keys. Never hardcode real keys. Provide `.env.example` with documented placeholders.
