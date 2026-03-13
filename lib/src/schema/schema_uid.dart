@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:blockchain_utils/blockchain_utils.dart';
-import 'package:on_chain/on_chain.dart';
 
 import 'schema_definition.dart';
 

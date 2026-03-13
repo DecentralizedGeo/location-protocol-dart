@@ -4,6 +4,7 @@ library location_protocol;
 
 // LP layer
 export 'src/lp/lp_payload.dart';
+export 'src/lp/lp_version.dart';
 export 'src/lp/location_serializer.dart';
 
 // Schema layer
@@ -15,11 +16,11 @@ export 'src/schema/schema_uid.dart';
 export 'src/eas/constants.dart';
 export 'src/eas/abi_encoder.dart';
 export 'src/eas/offchain_signer.dart';
-// export 'src/eas/onchain_client.dart';
-// export 'src/eas/schema_registry.dart';
+export 'src/eas/onchain_client.dart';
+export 'src/eas/schema_registry.dart';
 
 // Config
-// export 'src/config/chain_config.dart';
+export 'src/config/chain_config.dart';
 
 // Models
 export 'src/models/attestation.dart';

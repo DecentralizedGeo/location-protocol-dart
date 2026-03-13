@@ -10,6 +10,7 @@ environment:
 
 dependencies:
   on_chain: ^7.1.0
+  blockchain_utils: ^5.4.0
 
 dev_dependencies:
   test: ^1.25.0
