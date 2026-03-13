@@ -1,10 +1,12 @@
 import 'dart:typed_data';
 
 import 'package:on_chain/on_chain.dart';
+import 'package:blockchain_utils/blockchain_utils.dart';
 
 import '../schema/schema_definition.dart';
 import '../schema/schema_uid.dart';
 import '../config/chain_config.dart';
+import '../rpc/rpc_helper.dart';
 
 /// Client for interacting with the EAS SchemaRegistry contract.
 ///
@@ -83,16 +85,96 @@ class SchemaRegistryClient {
   ///
   /// Requires an RPC connection and a funded wallet.
   Future<String> register(SchemaDefinition schema) async {
-    // Build and send the transaction using on_chain's RPC client
-    // This will use EIP-1559 if supported by the chain
-    throw UnimplementedError('TODO: implement with on_chain RPC');
+    final callData = buildRegisterCallData(schema);
+    final helper = RpcHelper(
+      rpcUrl: rpcUrl,
+      privateKeyHex: privateKeyHex,
+      chainId: chainId,
+    );
+    try {
+      return await helper.sendTransaction(
+        to: contractAddress,
+        data: callData,
+      );
+    } finally {
+      helper.close();
+    }
   }
+
+  /// ABI fragment for `getSchema(bytes32)`.
+  static final _getSchemaFragment = AbiFunctionFragment.fromJson({
+    'name': 'getSchema',
+    'type': 'function',
+    'stateMutability': 'view',
+    'inputs': [
+      {'name': 'uid', 'type': 'bytes32'},
+    ],
+    'outputs': [
+      {
+        'name': '',
+        'type': 'tuple',
+        'components': [
+          {'name': 'uid', 'type': 'bytes32'},
+          {'name': 'resolver', 'type': 'address'},
+          {'name': 'revocable', 'type': 'bool'},
+          {'name': 'schema', 'type': 'string'},
+        ],
+      },
+    ],
+  });
 
   /// Queries a schema by its UID from the SchemaRegistry.
   ///
   /// Returns the schema record or null if not found.
   Future<SchemaRecord?> getSchema(String uid) async {
-    throw UnimplementedError('TODO: implement with on_chain RPC');
+    final helper = RpcHelper(
+      rpcUrl: rpcUrl,
+      privateKeyHex: privateKeyHex,
+      chainId: chainId,
+    );
+    try {
+      final uidBytes =
+          BytesUtils.fromHexString(uid.replaceAll('0x', ''));
+
+      final result = await helper.callContract(
+        contractAddress: contractAddress,
+        function: _getSchemaFragment,
+        params: [uidBytes],
+      );
+
+      if (result.isEmpty) return null;
+
+      // The result is a list: [uid, resolver, revocable, schema]
+      // Parse based on ABI output tuple structure
+      final decoded = result[0]; // Tuple result
+      if (decoded is List && decoded.length >= 4) {
+        final recordUid = decoded[0]; // bytes32 (List<int>)
+        final resolver = decoded[1]; // address (ETHAddress or String)
+        final revocable = decoded[2]; // bool
+        final schema = decoded[3]; // string
+
+        final uidHex = recordUid is List<int>
+            ? BytesUtils.toHexString(recordUid, prefix: '0x')
+            : recordUid.toString();
+
+        // Check for zero UID (schema not found)
+        if (uidHex ==
+            '0x0000000000000000000000000000000000000000000000000000000000000000') {
+          return null;
+        }
+
+        return SchemaRecord(
+          uid: uidHex,
+          resolver: resolver.toString(),
+          revocable: revocable as bool,
+          schema: schema.toString(),
+        );
+      }
+
+      return null;
+    } finally {
+      helper.close();
+    }
   }
 }
 

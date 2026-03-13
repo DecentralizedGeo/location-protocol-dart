@@ -46,5 +46,39 @@ void main() {
       expect(uid, startsWith('0x'));
       expect(uid.length, equals(66));
     });
+
+    test('register attempts RPC call (fails gracefully without network)', () {
+      final registry = SchemaRegistryClient(
+        rpcUrl: 'http://localhost:1', // intentionally unreachable
+        privateKeyHex:
+            'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+        chainId: 11155111,
+      );
+      // Calling register should attempt a real RPC call and throw
+      // a network/connection error (not UnimplementedError)
+      expect(
+        () => registry.register(
+          SchemaDefinition(
+            fields: [SchemaField(type: 'uint256', name: 'timestamp')],
+          ),
+        ),
+        throwsA(isNot(isA<UnimplementedError>())),
+      );
+    });
+
+    test('getSchema attempts RPC call (fails gracefully without network)', () {
+      final registry = SchemaRegistryClient(
+        rpcUrl: 'http://localhost:1', // intentionally unreachable
+        privateKeyHex:
+            'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+        chainId: 11155111,
+      );
+      expect(
+        () => registry.getSchema(
+          '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+        ),
+        throwsA(isNot(isA<UnimplementedError>())),
+      );
+    });
   });
 }
