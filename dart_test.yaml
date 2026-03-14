@@ -1,0 +1,5 @@
+tags:
+  sepolia:
+    # Tests requiring a live Sepolia RPC connection.
+    # Run with: dart test --tags sepolia
+    # Requires .env file with SEPOLIA_RPC_URL and SEPOLIA_PRIVATE_KEY
