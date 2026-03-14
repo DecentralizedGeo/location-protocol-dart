@@ -34,9 +34,11 @@
 - **SchemaRegistryClient**: Handles `register` transaction construction. Computes `SchemaUID` locally to allow offline pre-verification.
 - **EASClient**: The primary interface for onchain interactions (`attest`, `timestamp`, `registerSchema`). Delegates registry work to `SchemaRegistryClient`.
 
-### RPC Transport Layer (Phase 2)
+### RPC Transport Layer (Phase 2 & 3)
+- **`RpcProvider` (Phase 3 Abstraction)**: An interface for all on-chain state queries and transaction submissions. Clients (`EASClient`, `SchemaRegistryClient`) require this interface via constructor injection, preventing them from managing raw HTTP or private key lifecycle directly.
+- **`DefaultRpcProvider` (formerly `RpcHelper`)**: The standard implementation using `on_chain` and `HttpRpcService`. In `on_chain` v7.1.0, direct `data` injection for raw ABI payloads is not available via public setters in the base `ETHTransactionBuilder`. This class implements a manual construction pattern: fetch nonce/gas/fees -> build `ETHTransaction` (legacy or EIP-1559) -> use internal `autoFill` logic via `fillTransaction` to finalize before signing.
+- **`FakeRpcProvider`**: An offline mock implementation of `RpcProvider` that returns hardcoded ABI byte arrays, allowing instant, network-free unit testing of client classes.
 - **`HttpRpcService`**: A thin `dart:io` `HttpClient` wrapper implementing `on_chain`'s `EthereumServiceProvider` mixin. Single method to implement: `doRequest<T>()`. Zero new dependencies.
-- **`RpcHelper`**: Shared transaction lifecycle helper. In `on_chain` v7.1.0, direct `data` injection for raw ABI payloads is not available via public setters in the base `ETHTransactionBuilder`. `RpcHelper` implements a manual construction pattern: fetch nonce/gas/fees -> build `ETHTransaction` (legacy or EIP-1559) -> use internal `autoFill` logic via `fillTransaction` to finalize before signing.
 - **`ETHTransactionBuilder`**: `on_chain`'s built-in transaction builder. Two constructors: `ETHTransactionBuilder(...)` for basic tx, `.contract(...)` for contract calls with `AbiFunctionFragment`. `autoFill()` handles nonce, gas estimation, and EIP-1559 fee calculation automatically.
 - **`EthereumProvider`**: Wraps a `BaseServiceProvider` (our `HttpRpcService`) and dispatches `EthereumRequest` objects as JSON-RPC calls.
 

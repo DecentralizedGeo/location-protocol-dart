@@ -71,3 +71,13 @@
 - **Context**: Implemented `EASClient.attest/timestamp/getAttestation`. Added `Attestation` model for parsing onchain records. Created a dry-run integration test `onchain_workflow_test.dart` that verifies the full RPC pipeline without needing a live network.
 - **Key Insight**: ABI tuple encoding for nested structs (like `AttestationRequest`) in `on_chain` requires precise List-of-Lists structures that match the ABI fragment definition (e.g., nesting the `AttestationRequestData` struct inside the request tuple). ABI decoding from `eth_call` requires manual type checking and casting (`BigInt` vs `int`, `Uint8List` vs `List<int>`) to safely map tuple results to Dart models.
 - **Verification**: Total suite reached 95 tests with 100% pass rate.
+
+### [ID: PHASE3_CODEBASE_REVIEW_PLAN] -> Follows [PHASE2_BATCH2_EXEC]
+- **Date**: 2026-03-13
+- **Event**: Phase 3 Codebase Review — design decisions and implementation plan approved
+- **Status**: COMPLETED (planning only; execution pending)
+- **Context**: Reviewed the codebase for readability and maintainability improvements. Identified duplicated hex/byte logic, noisy inline ABIs, complex tuple decoding in clients, and tight coupling of RPC credentials in client constructors.
+- **Design Decision**: Option A (DRY Refactoring) and Option B (Architectural Expansion). Clients will now require an `RpcProvider` interface via DI, removing raw `rpcUrl`/`privateKey` from their constructors (matching the "Astral" pattern). Tuple decoding moved to domain model factories (`Attestation.fromTuple`).
+- **Technical Pivot**: Confirmed `OffchainSigner` intentionally does *not* take the new `RpcProvider`, as it is strictly for local cryptography, maintaining a clean boundary between transport and cryptography.
+- **Key Insight**: Discovered `AbiEncoder` blindly trusts user-provided string inputs for `bytes/bytes32` schema fields. Added a requirement to use `HexUtils(.toBytes())` to intercept and safely convert these before handing them to `on_chain`'s tuple coder. Checked changelogs for `on_chain` v8 and `blockchain_utils` v6; confirmed the plan is 100% forward-compatible and inherits constant-time crypto safety automatically.
+- **Artifacts**: `docs/spec/plans/2026-03-13_phase3-codebase-review.md` (8 tasks)
