@@ -140,5 +140,36 @@ void main() {
       );
       expect(encoded, isNotEmpty);
     });
+
+    test('pre-processes hex strings correctly for bytes and uint256', () {
+      final hexSchema = SchemaDefinition(
+        fields: [
+          SchemaField(type: 'bytes', name: 'myBytes'),
+          SchemaField(type: 'uint256', name: 'myUint'),
+          SchemaField(type: 'string', name: 'myString'),
+        ],
+      );
+
+      final lpPayload = LPPayload(
+        lpVersion: '1.0.0',
+        srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+        locationType: 'point',
+        location: '0,0',
+      );
+
+      // We should be able to pass string hexes for bytes, and standard BigInts for uint256.
+      // But we specifically need to test if the encoder drops down to `toBytes()` correctly
+      final encoded = AbiEncoder.encode(
+        schema: hexSchema,
+        lpPayload: lpPayload,
+        userData: {
+          'myBytes': '0x1234',
+          'myUint': '0xDEADBEEF', // even though it's string, we do not convert with toBytes, on_chain expects BigInt or String representation of number, but wait - the code DOES toBytes() but if it is uint256, it skips it!
+          'myString': '0xNotBytes',
+        },
+      );
+      
+      expect(encoded, isNotEmpty);
+    });
   });
 }

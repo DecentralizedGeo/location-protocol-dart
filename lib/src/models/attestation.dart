@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:blockchain_utils/blockchain_utils.dart';
 
 import 'signature.dart';
 
@@ -88,4 +89,54 @@ class SignedOffchainAttestation {
     required this.signature,
     required this.signer,
   });
+}
+
+/// A record representing an on-chain attestation.
+class Attestation {
+  final String uid;
+  final String schema;
+  final BigInt time;
+  final BigInt expirationTime;
+  final BigInt revocationTime;
+  final String refUID;
+  final String recipient;
+  final String attester;
+  final bool revocable;
+  final Uint8List data;
+
+  const Attestation({
+    required this.uid,
+    required this.schema,
+    required this.time,
+    required this.expirationTime,
+    required this.revocationTime,
+    required this.refUID,
+    required this.recipient,
+    required this.attester,
+    required this.revocable,
+    required this.data,
+  });
+
+  factory Attestation.fromTuple(List<dynamic> decoded) {
+    final recordUid = decoded[0];
+    final schema = decoded[1];
+    final time = decoded[2];
+    final expirationTime = decoded[3];
+    final revocationTime = decoded[4];
+    final refUID = decoded[5];
+    final data = decoded[9];
+
+    return Attestation(
+      uid: recordUid is List<int> ? BytesUtils.toHexString(recordUid, prefix: '0x') : recordUid.toString(),
+      schema: schema is List<int> ? BytesUtils.toHexString(schema, prefix: '0x') : schema.toString(),
+      time: time is BigInt ? time : BigInt.from(time),
+      expirationTime: expirationTime is BigInt ? expirationTime : BigInt.from(expirationTime),
+      revocationTime: revocationTime is BigInt ? revocationTime : BigInt.from(revocationTime),
+      refUID: refUID is List<int> ? BytesUtils.toHexString(refUID, prefix: '0x') : refUID.toString(),
+      recipient: decoded[6].toString(),
+      attester: decoded[7].toString(),
+      revocable: decoded[8] as bool,
+      data: data is List<int> ? Uint8List.fromList(data) : data as Uint8List,
+    );
+  }
 }

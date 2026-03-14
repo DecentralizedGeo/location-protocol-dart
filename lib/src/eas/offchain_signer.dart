@@ -9,6 +9,8 @@ import '../schema/schema_uid.dart';
 import '../models/attestation.dart';
 import '../models/signature.dart';
 import '../models/verification_result.dart';
+import '../utils/byte_utils.dart';
+import '../utils/hex_utils.dart';
 import 'abi_encoder.dart';
 import 'constants.dart';
 
@@ -116,8 +118,7 @@ class OffchainSigner {
   /// Verifies a signed offchain attestation.
   VerificationResult verifyOffchainAttestation(
       SignedOffchainAttestation attestation) {
-    final saltBytes = Uint8List.fromList(
-        BytesUtils.fromHexString(attestation.salt.replaceAll('0x', '')));
+    final saltBytes = Uint8List.fromList(attestation.salt.toBytes());
 
     // 1. Verify UID
     final expectedUID = _computeOffchainUID(
@@ -253,29 +254,28 @@ class OffchainSigner {
     final List<int> packed = [];
 
     // 1. version (uint16)
-    packed.addAll(_uint16ToBytes(EASConstants.attestationVersion));
+    packed.addAll(ByteUtils.uint16ToBytes(EASConstants.attestationVersion));
 
     // 2. schema (bytes32) - should be 32 bytes
-    packed.addAll(BytesUtils.fromHexString(schemaUID.replaceAll('0x', '')));
+    packed.addAll(schemaUID.toBytes());
 
     // 3. recipient (address) - 20 bytes
-    packed.addAll(
-        BytesUtils.fromHexString(recipient.replaceAll('0x', '')).sublist(0, 20));
+    packed.addAll(recipient.toBytes().sublist(0, 20));
 
     // 4. attester (address) - 20 bytes (always ZERO_ADDRESS for offchain UID v2)
     packed.addAll(List<int>.filled(20, 0));
 
     // 5. time (uint64)
-    packed.addAll(_uint64ToBytes(time));
+    packed.addAll(ByteUtils.uint64ToBytes(time));
 
     // 6. expirationTime (uint64)
-    packed.addAll(_uint64ToBytes(expirationTime));
+    packed.addAll(ByteUtils.uint64ToBytes(expirationTime));
 
     // 7. revocable (bool)
     packed.add(revocable ? 1 : 0);
 
     // 8. refUID (bytes32)
-    packed.addAll(BytesUtils.fromHexString(refUID.replaceAll('0x', '')));
+    packed.addAll(refUID.toBytes());
 
     // 9. data (bytes)
     packed.addAll(data);
@@ -288,18 +288,5 @@ class OffchainSigner {
 
     final hash = QuickCrypto.keccack256Hash(packed);
     return BytesUtils.toHexString(hash, prefix: '0x');
-  }
-
-  List<int> _uint16ToBytes(int value) {
-    final b = ByteData(2);
-    b.setUint16(0, value, Endian.big);
-    return b.buffer.asUint8List();
-  }
-
-  List<int> _uint64ToBytes(BigInt value) {
-    final b = ByteData(8);
-    // BigInt.toUnsigned(64) to handle overflow if any
-    b.setUint64(0, value.toUnsigned(64).toInt(), Endian.big);
-    return b.buffer.asUint8List();
   }
 }

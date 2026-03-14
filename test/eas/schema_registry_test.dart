@@ -2,6 +2,7 @@ import 'package:test/test.dart';
 import 'package:location_protocol/src/schema/schema_field.dart';
 import 'package:location_protocol/src/schema/schema_definition.dart';
 import 'package:location_protocol/src/eas/schema_registry.dart';
+import 'package:location_protocol/src/rpc/default_rpc_provider.dart';
 
 void main() {
   group('SchemaRegistryClient', () {
@@ -49,10 +50,11 @@ void main() {
 
     test('register attempts RPC call (fails gracefully without network)', () {
       final registry = SchemaRegistryClient(
-        rpcUrl: 'http://localhost:1', // intentionally unreachable
-        privateKeyHex:
-            'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
-        chainId: 11155111,
+        provider: DefaultRpcProvider(
+          rpcUrl: 'http://localhost:1', // intentionally unreachable
+          privateKeyHex: 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+          chainId: 11155111,
+        ),
       );
       // Calling register should attempt a real RPC call and throw
       // a network/connection error (not UnimplementedError)
@@ -68,10 +70,11 @@ void main() {
 
     test('getSchema attempts RPC call (fails gracefully without network)', () {
       final registry = SchemaRegistryClient(
-        rpcUrl: 'http://localhost:1', // intentionally unreachable
-        privateKeyHex:
-            'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
-        chainId: 11155111,
+        provider: DefaultRpcProvider(
+          rpcUrl: 'http://localhost:1', // intentionally unreachable
+          privateKeyHex: 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+          chainId: 11155111,
+        ),
       );
       expect(
         () => registry.getSchema(

@@ -8,6 +8,7 @@ import 'package:location_protocol/src/schema/schema_definition.dart';
 import 'package:location_protocol/src/eas/schema_registry.dart';
 import 'package:location_protocol/src/eas/onchain_client.dart';
 import 'package:location_protocol/src/eas/offchain_signer.dart';
+import 'package:location_protocol/src/rpc/default_rpc_provider.dart';
 
 import '../test_helpers/dotenv_loader.dart';
 
@@ -25,9 +26,11 @@ void main() {
   group('Sepolia Onchain Operations', () {
     test('register a schema on Sepolia', () async {
       final registry = SchemaRegistryClient(
-        rpcUrl: rpcUrl,
-        privateKeyHex: privateKey,
-        chainId: 11155111,
+        provider: DefaultRpcProvider(
+          rpcUrl: rpcUrl,
+          privateKeyHex: privateKey,
+          chainId: 11155111,
+        ),
       );
 
       // Use a unique schema to avoid "already registered" reverts.
@@ -49,9 +52,11 @@ void main() {
 
     test('timestamp an offchain attestation on Sepolia', () async {
       final client = EASClient(
-        rpcUrl: rpcUrl,
-        privateKeyHex: privateKey,
-        chainId: 11155111,
+        provider: DefaultRpcProvider(
+          rpcUrl: rpcUrl,
+          privateKeyHex: privateKey,
+          chainId: 11155111,
+        ),
       );
 
       // First create an offchain attestation to get a UID

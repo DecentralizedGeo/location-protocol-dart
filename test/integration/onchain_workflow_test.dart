@@ -4,6 +4,7 @@ import 'package:location_protocol/src/schema/schema_field.dart';
 import 'package:location_protocol/src/schema/schema_definition.dart';
 import 'package:location_protocol/src/eas/schema_registry.dart';
 import 'package:location_protocol/src/eas/onchain_client.dart';
+import 'package:location_protocol/src/rpc/default_rpc_provider.dart';
 
 void main() {
   const testKey =
@@ -15,15 +16,19 @@ void main() {
       final chainId = 11155111;
 
       final registry = SchemaRegistryClient(
-        rpcUrl: rpcUrl,
-        privateKeyHex: testKey,
-        chainId: chainId,
+        provider: DefaultRpcProvider(
+          rpcUrl: rpcUrl,
+          privateKeyHex: testKey,
+          chainId: chainId,
+        ),
       );
 
       final client = EASClient(
-        rpcUrl: rpcUrl,
-        privateKeyHex: testKey,
-        chainId: chainId,
+        provider: DefaultRpcProvider(
+          rpcUrl: rpcUrl,
+          privateKeyHex: testKey,
+          chainId: chainId,
+        ),
       );
 
       final schema = SchemaDefinition(
