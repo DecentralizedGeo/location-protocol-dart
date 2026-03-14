@@ -31,6 +31,12 @@
 - **Note**: Ensure `time` and `expirationTime` are big-endian 8-byte arrays. `revocable` is a single byte (0 or 1).
 - **Zero Padding**: Signature `r` and `s` components MUST be zero-padded to 32 bytes each before concatenating with `v` for recovery.
 
+### Package Version Update (as of 2026-03-13)
+- **`on_chain ^8.0.0`** + **`blockchain_utils ^6.0.0`** + **Dart SDK `^3.11.0`** — supersedes all prior v7.1.0/v5.4.0 notes. Upgrade path was clean.
+- **Non-canonical RLP zero bug**: `blockchain_utils` v6 `BigintUtils.bitlengthInBytes(BigInt.zero)` returns `1` (not `0`) due to `if (bitlength == 0) return 1` guard. This causes `toBytes(BigInt.zero)` = `[0x00]`, which RLP-encodes as `0x00` (non-canonical) instead of `0x80` (canonical empty byte string). Geth rejects EIP-1559 transactions with this encoding with: `rlp: non-canonical integer (leading zero bytes) for *big.Int, decoding into (types.DynamicFeeTx).Value`.
+- **Fix Pattern**: Add a `_canonicalBigIntBytes` helper that returns `<int>[]` for `BigInt.zero`, then skip `ETHTransaction.serialized` and build EIP-1559 RLP bytes directly with `RLPEncoder`. See `RpcHelper._buildEip1559Bytes`.
+- **Infura Sepolia fee quirk**: `EthereumProvider.request(EthereumRequestGetFeeHistory(..., rewardPercentiles: [50]))` returns empty `rewards` array on Infura Sepolia, causing `FeeHistory.toFee()` to throw `RangeError`. Use a try/catch fallback: fetch `baseFeePerGas.first` directly and compute `maxFeePerGas = baseFee * 2 + maxPriorityFeePerGas`.
+
 ### Dependency & Encoding Quirks
 - **`blockchain_utils` Versioning**: When using `on_chain ^7.1.0`, explicitly declare `blockchain_utils: ^5.4.0` in `pubspec.yaml` to avoid version solver conflicts with the library's transitive requirements.
 - **ABI `bytes32` Encoding**: Never pass hex strings directly to `on_chain`'s `Fragment.encode` for `bytes32` parameters. Always convert to `Uint8List` using `BytesUtils.fromHexString(uid.replaceAll('0x', ''))`.

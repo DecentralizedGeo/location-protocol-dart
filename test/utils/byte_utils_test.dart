@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import '../../lib/src/utils/byte_utils.dart';
+import 'package:location_protocol/src/utils/byte_utils.dart';
 
 void main() {
   group('ByteUtils', () {

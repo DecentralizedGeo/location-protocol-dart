@@ -32,8 +32,59 @@ class RpcHelper {
   }
 
   /// The sender's Ethereum address derived from the private key.
-  ETHAddress get senderAddress =>
-      _privateKey.publicKey().toAddress();
+  ETHAddress get senderAddress => _privateKey.publicKey().toAddress();
+
+  /// Canonical RLP encoding of a BigInt — returns `[]` for zero.
+  ///
+  /// `blockchain_utils` v6+ `BigintUtils.bitlengthInBytes(BigInt.zero)` returns 1
+  /// instead of 0, causing `BigintUtils.toBytes(BigInt.zero)` to produce `[0x00]`.
+  /// The RLP encoder then emits byte `0x00` (single byte ≤ 0x7F → pass-through)
+  /// instead of `0x80` (empty byte string), which is non-canonical and rejected by
+  /// Geth's EIP-1559 transaction decoder with:
+  ///   "rlp: non-canonical integer (leading zero bytes) for *big.Int"
+  ///
+  /// This helper returns `[]` for zero so the RLP encoder produces `0x80` (correct).
+  static List<int> _canonicalBigIntBytes(BigInt value) {
+    if (value == BigInt.zero) return <int>[];
+    return BigintUtils.toBytes(
+      value,
+      length: BigintUtils.bitlengthInBytes(value),
+    );
+  }
+
+  /// Builds canonical EIP-1559 RLP bytes (unsigned or signed).
+  ///
+  /// Bypasses [ETHTransaction.serialized] / [ETHTransaction.signedSerialized]
+  /// to avoid the upstream `bigintToBytes(BigInt.zero)` non-canonical encoding.
+  List<int> _buildEip1559Bytes({
+    required BigInt chainId,
+    required int nonce,
+    required BigInt maxPriorityFeePerGas,
+    required BigInt maxFeePerGas,
+    required BigInt gasLimit,
+    required ETHAddress to,
+    required BigInt value,
+    required List<int> data,
+    ETHSignature? sig,
+  }) {
+    final fields = <List<dynamic>>[
+      ETHTransactionUtils.bigintToBytes(chainId),
+      ETHTransactionUtils.intToBytes(nonce),
+      ETHTransactionUtils.bigintToBytes(maxPriorityFeePerGas),
+      ETHTransactionUtils.bigintToBytes(maxFeePerGas),
+      ETHTransactionUtils.bigintToBytes(gasLimit),
+      to.toBytes(),
+      _canonicalBigIntBytes(value), // ← fixed zero-value encoding
+      data,
+      <dynamic>[], // access list (empty)
+    ];
+    if (sig != null) {
+      fields.add(ETHTransactionUtils.intToBytes(ETHTransactionUtils.parity(sig.v)));
+      fields.add(ETHTransactionUtils.trimLeadingZero(sig.rBytes));
+      fields.add(ETHTransactionUtils.trimLeadingZero(sig.sBytes));
+    }
+    return [ETHTransactionType.eip1559.prefix, ...RLPEncoder.encode(fields)];
+  }
 
   /// Sends a contract-calling transaction and returns the tx hash.
   ///
@@ -48,6 +99,7 @@ class RpcHelper {
     final fromAddress = senderAddress;
     final toAddress = ETHAddress(to);
     final chainIdBig = BigInt.from(chainId);
+    final txValue = value ?? BigInt.zero;
 
     // 1. Fetch Nonce
     final nonce = await _provider.request(
@@ -69,16 +121,27 @@ class RpcHelper {
     ).catchError((_) => null);
 
     if (feeHistory != null) {
-      txType = ETHTransactionType.eip1559;
-      final fee = feeHistory.toFee();
-      maxPriorityFeePerGas = fee.normal;
-      maxFeePerGas = fee.normal + fee.baseFee;
+      try {
+        final fee = feeHistory.toFee();
+        txType = ETHTransactionType.eip1559;
+        maxPriorityFeePerGas = fee.normal;
+        maxFeePerGas = fee.normal + fee.baseFee;
+      } catch (e) {
+        // Fallback to manual EIP-1559 if FeeHistory.toFee() crashes
+        // (e.g., empty reward array on Infura Sepolia).
+        txType = ETHTransactionType.eip1559;
+        maxPriorityFeePerGas = BigInt.from(1000000000); // 1 gwei
+        final baseFee = feeHistory.baseFeePerGas.isNotEmpty
+            ? feeHistory.baseFeePerGas.first
+            : BigInt.zero;
+        maxFeePerGas = baseFee * BigInt.two + maxPriorityFeePerGas;
+      }
     } else {
       gasPrice = await _provider.request(EthereumRequestGetGasPrice());
     }
 
-    // 3. Estimate Gas
-    // Create a temporary transaction for estimation
+    // 3. Estimate Gas — use ETHTransaction only for the estimate call (no
+    //    signing involved, so the non-canonical value encoding is harmless here).
     final estimateTx = ETHTransaction(
       type: txType,
       from: fromAddress,
@@ -89,7 +152,7 @@ class RpcHelper {
       maxFeePerGas: maxFeePerGas,
       maxPriorityFeePerGas: maxPriorityFeePerGas,
       data: data,
-      value: value ?? BigInt.zero,
+      value: txValue,
       chainId: chainIdBig,
     );
 
@@ -97,7 +160,39 @@ class RpcHelper {
       EthereumRequestEstimateGas(transaction: estimateTx.toEstimate()),
     );
 
-    // 4. Build Final Transaction
+    // 4. Sign and Send — use canonical EIP-1559 bytes to avoid the
+    //    blockchain_utils v6 non-canonical zero encoding bug.
+    if (txType == ETHTransactionType.eip1559) {
+      final unsignedBytes = _buildEip1559Bytes(
+        chainId: chainIdBig,
+        nonce: nonce,
+        maxPriorityFeePerGas: maxPriorityFeePerGas!,
+        maxFeePerGas: maxFeePerGas!,
+        gasLimit: gasLimit,
+        to: toAddress,
+        value: txValue,
+        data: data,
+      );
+      final signature = _privateKey.sign(unsignedBytes);
+      final signedBytes = _buildEip1559Bytes(
+        chainId: chainIdBig,
+        nonce: nonce,
+        maxPriorityFeePerGas: maxPriorityFeePerGas,
+        maxFeePerGas: maxFeePerGas,
+        gasLimit: gasLimit,
+        to: toAddress,
+        value: txValue,
+        data: data,
+        sig: signature,
+      );
+      return await _provider.request(
+        EthereumRequestSendRawTransaction(
+          transaction: BytesUtils.toHexString(signedBytes, prefix: '0x'),
+        ),
+      );
+    }
+
+    // Legacy fallback (gasPrice path)
     final tx = ETHTransaction(
       type: txType,
       from: fromAddress,
@@ -105,17 +200,12 @@ class RpcHelper {
       nonce: nonce,
       gasLimit: gasLimit,
       gasPrice: gasPrice,
-      maxFeePerGas: maxFeePerGas,
-      maxPriorityFeePerGas: maxPriorityFeePerGas,
       data: data,
-      value: value ?? BigInt.zero,
+      value: txValue,
       chainId: chainIdBig,
     );
-
-    // 5. Sign and Send
     final signature = _privateKey.sign(tx.serialized);
     final signedRaw = tx.signedSerialized(signature);
-    
     return await _provider.request(
       EthereumRequestSendRawTransaction(
         transaction: BytesUtils.toHexString(signedRaw, prefix: '0x'),

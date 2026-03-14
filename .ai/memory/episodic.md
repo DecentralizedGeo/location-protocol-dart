@@ -72,6 +72,16 @@
 - **Key Insight**: ABI tuple encoding for nested structs (like `AttestationRequest`) in `on_chain` requires precise List-of-Lists structures that match the ABI fragment definition (e.g., nesting the `AttestationRequestData` struct inside the request tuple). ABI decoding from `eth_call` requires manual type checking and casting (`BigInt` vs `int`, `Uint8List` vs `List<int>`) to safely map tuple results to Dart models.
 - **Verification**: Total suite reached 95 tests with 100% pass rate.
 
+### [ID: SEPOLIA_RLP_BUG_FIX] -> Follows [PHASE3_CODEBASE_REVIEW_PLAN]
+- **Date**: 2026-03-13
+- **Event**: Debugged and fixed failing Sepolia integration tests (`register` and `timestamp`)
+- **Status**: COMPLETED
+- **Context**: Both tests failed with `rlp: non-canonical integer (leading zero bytes) for *big.Int, decoding into (types.DynamicFeeTx).Value`. Root cause: `blockchain_utils` v6.0.0's `BigintUtils.bitlengthInBytes(BigInt.zero)` returns `1` (not `0`) due to an explicit guard `if (bitlength == 0) return 1`, causing `toBytes(BigInt.zero)` = `[0x00]`. This RLP-encodes as `0x00` (single byte ≤ 0x7F → pass-through) rather than `0x80` (empty byte string = canonical zero), which Geth rejects for EIP-1559 `DynamicFeeTx.Value`.
+- **Key Insight**: The project was already upgraded to `on_chain ^8.0.0` + `blockchain_utils ^6.0.0` (lock file confirmed), so the old v7.1.0/v5.4.0 procedural notes no longer apply. The SDK is now `^3.11.0`.
+- **Fix**: Added `_canonicalBigIntBytes` helper (returns `[]` for zero) and `_buildEip1559Bytes` method to `RpcHelper`. For EIP-1559 txs, signing and serialization now bypass `ETHTransaction.serialized` entirely, using `RLPEncoder` directly. Legacy path is unchanged.
+- **Verification**: Test 1 (register schema): TX `0x4c800fe269287501679c94fb9a28678f8623b437e1cfbca0ef98426ebfca2e38`. Test 2 (timestamp): TX `0x0f19ad65661d45f2bed9e706126d9599f0255a3e831e3e555368726e1809b24a`. Both confirmed on Sepolia.
+- **Secondary Issue**: `FeeHistory.toFee()` throws `RangeError` on Infura Sepolia (empty `rewards` array). Fallback to manual EIP-1559 fees works correctly; both tests pass.
+
 ### [ID: PHASE3_CODEBASE_REVIEW_PLAN] -> Follows [PHASE2_BATCH2_EXEC]
 - **Date**: 2026-03-13
 - **Event**: Phase 3 Codebase Review — design decisions and implementation plan approved
