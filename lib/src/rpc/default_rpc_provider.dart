@@ -17,6 +17,7 @@ import 'rpc_provider.dart';
 /// 5. Sending raw transaction
 class DefaultRpcProvider implements RpcProvider {
   final String rpcUrl;
+  @override
   final int chainId;
 
   late final ETHPrivateKey _privateKey;

@@ -1,8 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:on_chain/on_chain.dart';
-import 'package:blockchain_utils/blockchain_utils.dart';
-
 import '../lp/lp_payload.dart';
 import '../schema/schema_definition.dart';
 import '../config/chain_config.dart';
@@ -32,7 +29,7 @@ class EASClient {
 
   /// The EAS contract address for this chain.
   String get easAddress {
-    if (_easAddress != null) return _easAddress!;
+    if (_easAddress != null) return _easAddress;
     final config = ChainConfig.forChainId(provider.chainId);
     if (config == null) throw StateError('No EAS address for chainId ${provider.chainId}.');
     return config.eas;
@@ -84,7 +81,7 @@ class EASClient {
           recipient,
           expTime,
           schema.revocable,
-          (ref is String) ? ref.toBytes() : ref,
+          ref.toBytes(),
           encodedData,
           BigInt.zero, // transaction value in request data, usually 0
         ]

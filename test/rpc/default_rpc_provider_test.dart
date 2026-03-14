@@ -1,5 +1,4 @@
 import 'package:test/test.dart';
-import 'package:on_chain/on_chain.dart';
 import 'package:location_protocol/src/rpc/default_rpc_provider.dart';
 import 'package:location_protocol/src/rpc/rpc_provider.dart';
 
