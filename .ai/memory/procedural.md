@@ -10,7 +10,8 @@
   - If SDK constraints conflict, downgrade library cautiously or request SDK upgrade.
 - **KECCAK256 / Crypto**:
   - Use `QuickCrypto.keccack256Hash(Uint8List)` from `blockchain_utils` for pure Dart hashing.
-  - Use `BytesUtils` for hex/Uint8List conversions.
+  - Use `HexUtils` (`str.toBytes()`) for hex string to `Uint8List` conversions for maximum readability.
+  - Use `ByteUtils` for explicit big-endian number-to-byte conversions (`uint16ToBytes`, `uint64ToBytes`).
   - **EIP-712 Signing**: Use `hashMessage: false` when signing a pre-computed EIP-712 digest (already hashed).
   - **Manual Transaction Construction**: When using pre-encoded ABI payloads with `on_chain` v7.1.0, bypass the high-level `ETHTransactionBuilder` for `autoFill` if you need to set the raw `data` field. Instead:
     - 1. Fetch `nonce`, `gasPrice`/`maxFeePerGas`, and `gasLimit` using `EthereumProvider`.

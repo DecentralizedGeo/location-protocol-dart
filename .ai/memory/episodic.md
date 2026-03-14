@@ -91,3 +91,11 @@
 - **Technical Pivot**: Confirmed `OffchainSigner` intentionally does *not* take the new `RpcProvider`, as it is strictly for local cryptography, maintaining a clean boundary between transport and cryptography.
 - **Key Insight**: Discovered `AbiEncoder` blindly trusts user-provided string inputs for `bytes/bytes32` schema fields. Added a requirement to use `HexUtils(.toBytes())` to intercept and safely convert these before handing them to `on_chain`'s tuple coder. Checked changelogs for `on_chain` v8 and `blockchain_utils` v6; confirmed the plan is 100% forward-compatible and inherits constant-time crypto safety automatically.
 - **Artifacts**: `docs/spec/plans/2026-03-13_phase3-codebase-review.md` (8 tasks)
+
+### [ID: PHASE3_CODEBASE_REVIEW_EXEC] -> Follows [PHASE3_CODEBASE_REVIEW_PLAN]
+- **Date**: 2026-03-14
+- **Event**: Implementation of Phase 3 (Codebase Review & DI Refactoring)
+- **Status**: COMPLETED
+- **Context**: Successfully extracted `HexUtils` and `ByteUtils` for readable type expansions. Migrated raw inline JSON ABIs to a central `EASAbis` registry. Moved raw tuple array index-parsing into domain model factories (`Attestation.fromTuple`, `SchemaRecord.fromTuple`).
+- **Architectural Shift**: Implemented strict Dependency Injection via the `RpcProvider` interface. `EASClient` and `SchemaRegistryClient` no longer accept URL/keys, requiring a provider instance. Proved the viability of this pattern by creating `FakeRpcProvider` for instant, offline unit tests without network mocking.
+- **Verification**: Cleaned up all static analysis warnings and achieved 100% test pass rate across 98 tests (including offline E2E mock tests).
