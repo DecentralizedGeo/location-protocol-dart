@@ -6,11 +6,11 @@ version: 0.1.0
 repository: https://github.com/DecentralizedGeo/location-protocol-dart
 
 environment:
-  sdk: ^3.0.0
+  sdk: ^3.11.0
 
 dependencies:
-  on_chain: ^7.1.0
-  blockchain_utils: ^5.4.0
+  on_chain: ^8.0.0
+  blockchain_utils: ^6.0.0
 
 dev_dependencies:
   test: ^1.25.0

@@ -27,9 +27,9 @@
     },
     {
       "name": "blockchain_utils",
-      "rootUri": "file:///C:/Users/seth/AppData/Local/Pub/Cache/hosted/pub.dev/blockchain_utils-5.4.0",
+      "rootUri": "file:///C:/Users/seth/AppData/Local/Pub/Cache/hosted/pub.dev/blockchain_utils-6.0.0",
       "packageUri": "lib/",
-      "languageVersion": "3.3"
+      "languageVersion": "3.7"
     },
     {
       "name": "boolean_selector",
@@ -147,9 +147,9 @@
     },
     {
       "name": "on_chain",
-      "rootUri": "file:///C:/Users/seth/AppData/Local/Pub/Cache/hosted/pub.dev/on_chain-7.1.0",
+      "rootUri": "file:///C:/Users/seth/AppData/Local/Pub/Cache/hosted/pub.dev/on_chain-8.0.0",
       "packageUri": "lib/",
-      "languageVersion": "3.3"
+      "languageVersion": "3.7"
     },
     {
       "name": "package_config",
@@ -162,6 +162,12 @@
       "rootUri": "file:///C:/Users/seth/AppData/Local/Pub/Cache/hosted/pub.dev/path-1.9.1",
       "packageUri": "lib/",
       "languageVersion": "3.4"
+    },
+    {
+      "name": "pointycastle",
+      "rootUri": "file:///C:/Users/seth/AppData/Local/Pub/Cache/hosted/pub.dev/pointycastle-4.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
     },
     {
       "name": "pool",
@@ -311,13 +317,12 @@
       "name": "location_protocol",
       "rootUri": "../",
       "packageUri": "lib/",
-      "languageVersion": "3.0"
+      "languageVersion": "3.11"
     }
   ],
-  "generated": "2026-03-13T01:04:01.022496Z",
   "generator": "pub",
-  "generatorVersion": "3.6.2",
+  "generatorVersion": "3.11.1",
   "flutterRoot": "file:///C:/Users/seth/.local/share/flutter",
-  "flutterVersion": "3.27.4",
+  "flutterVersion": "3.41.4",
   "pubCache": "file:///C:/Users/seth/AppData/Local/Pub/Cache"
 }
