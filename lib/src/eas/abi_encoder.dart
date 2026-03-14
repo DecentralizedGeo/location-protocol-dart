@@ -5,6 +5,7 @@ import 'package:on_chain/on_chain.dart';
 import '../lp/lp_payload.dart';
 import '../lp/location_serializer.dart';
 import '../schema/schema_definition.dart';
+import '../utils/hex_utils.dart';
 
 /// Schema-aware ABI encoder for Location Protocol attestations.
 ///
@@ -56,7 +57,18 @@ class AbiEncoder {
 
     // Append user field values in schema declaration order
     for (final field in schema.fields) {
-      values.add(userData[field.name]);
+      dynamic value = userData[field.name];
+      
+      // HexUtils: Robust conversion for bytes/bytes32 fields passed as hex strings
+      if ((field.type.startsWith('bytes') || field.type.startsWith('uint256')) && value is String && value.startsWith('0x')) {
+        // NOTE: if it's uint256, blockchain_utils might want BigInt instead of bytes, 
+        // string hex parsing for bytes is strictly using toBytes()
+        if (field.type.startsWith('bytes')) {
+          value = value.toBytes();
+        }
+      }
+      
+      values.add(value);
     }
 
     // Build ABI type list from all fields

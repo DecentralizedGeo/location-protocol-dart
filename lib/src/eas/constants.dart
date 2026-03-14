@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'dart:typed_data';
+import 'package:blockchain_utils/blockchain_utils.dart';
 
 /// EAS protocol constants.
 ///
@@ -39,7 +40,6 @@ class EASConstants {
 
   /// Converts a salt [Uint8List] to a `0x`-prefixed hex string.
   static String saltToHex(Uint8List salt) {
-    final hex = salt.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-    return '0x$hex';
+    return BytesUtils.toHexString(salt, prefix: '0x');
   }
 }
