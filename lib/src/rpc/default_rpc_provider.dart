@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:on_chain/on_chain.dart';
 import 'package:blockchain_utils/blockchain_utils.dart';
 
 import 'http_rpc_service.dart';
+import 'transaction_receipt.dart' as tx;
 
 import 'rpc_provider.dart';
 
@@ -19,6 +21,7 @@ class DefaultRpcProvider implements RpcProvider {
   final String rpcUrl;
   @override
   final int chainId;
+  final Duration receiptTimeout;
 
   late final ETHPrivateKey _privateKey;
   late final EthereumProvider _provider;
@@ -28,6 +31,7 @@ class DefaultRpcProvider implements RpcProvider {
     required this.rpcUrl,
     required String privateKeyHex,
     required this.chainId,
+    this.receiptTimeout = const Duration(minutes: 2),
   }) {
     _privateKey = ETHPrivateKey(privateKeyHex);
     _service = HttpRpcService(rpcUrl);
@@ -217,6 +221,55 @@ class DefaultRpcProvider implements RpcProvider {
       EthereumRequestSendRawTransaction(
         transaction: BytesUtils.toHexString(signedRaw, prefix: '0x'),
       ),
+    );
+  }
+
+  /// Performs an `eth_call` (read-only) against a contract.
+  ///
+  /// Returns the decoded ABI output.
+  @override
+  Future<tx.TransactionReceipt> waitForReceipt(
+    String txHash, {
+    Duration? timeout,
+    Duration pollInterval = const Duration(seconds: 4),
+  }) async {
+    final effectiveTimeout = timeout ?? receiptTimeout;
+    final deadline = DateTime.now().add(effectiveTimeout);
+
+    while (DateTime.now().isBefore(deadline)) {
+      final receipt = await _provider.request(
+        EthereumRequestGetTransactionReceipt(transactionHash: txHash),
+      );
+
+      if (receipt != null) {
+        if (receipt.status == false) {
+          throw StateError(
+            'Transaction reverted: $txHash (block ${receipt.blockNumber})',
+          );
+        }
+
+        return tx.TransactionReceipt(
+          txHash: receipt.transactionHash,
+          blockNumber: receipt.blockNumber ?? 0,
+          status: receipt.status,
+          logs: receipt.logs
+              .map(
+                (log) => tx.TransactionLog(
+                  address: log.address,
+                  topics: log.topics?.map((topic) => topic.toString()).toList() ?? const [],
+                  data: log.data ?? '0x',
+                ),
+              )
+              .toList(),
+        );
+      }
+
+      await Future.delayed(pollInterval);
+    }
+
+    throw TimeoutException(
+      'Transaction $txHash not mined within $effectiveTimeout',
+      effectiveTimeout,
     );
   }
 
