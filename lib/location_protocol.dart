@@ -26,3 +26,11 @@ export 'src/config/chain_config.dart';
 export 'src/models/attestation.dart';
 export 'src/models/signature.dart';
 export 'src/models/verification_result.dart';
+export 'src/models/attest_result.dart';
+export 'src/models/timestamp_result.dart';
+export 'src/models/register_result.dart';
+
+// RPC
+export 'src/rpc/rpc_provider.dart';
+export 'src/rpc/default_rpc_provider.dart';
+export 'src/rpc/transaction_receipt.dart';
