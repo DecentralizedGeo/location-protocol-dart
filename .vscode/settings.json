@@ -1,0 +1,6 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "dart": true,
+        "Test-Path": true
+    }
+}
