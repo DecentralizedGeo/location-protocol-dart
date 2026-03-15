@@ -3,6 +3,7 @@ import 'package:location_protocol/src/eas/constants.dart';
 import 'package:location_protocol/src/eas/onchain_client.dart';
 import 'package:location_protocol/src/lp/lp_payload.dart';
 import 'package:location_protocol/src/models/attest_result.dart';
+import 'package:location_protocol/src/models/timestamp_result.dart';
 import 'package:location_protocol/src/rpc/transaction_receipt.dart';
 import 'package:location_protocol/src/schema/schema_definition.dart';
 import 'package:location_protocol/src/schema/schema_field.dart';
@@ -135,6 +136,90 @@ void main() {
           ),
           userData: {'test': 'value'},
         ),
+        throwsStateError,
+      );
+    });
+  });
+
+  group('EASClient.timestamp (offline)', () {
+    late FakeRpcProvider fakeProvider;
+    late EASClient client;
+    final easAddress = '0xC2679fBD37d54388Ce493F1DB75320D236e1815e';
+
+    setUp(() {
+      fakeProvider = FakeRpcProvider();
+      client = EASClient(provider: fakeProvider, easAddress: easAddress);
+    });
+
+    test('returns TimestampResult with uid and time from Timestamped event', () async {
+      final inputUID =
+          '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      final timeTopic =
+          '0x0000000000000000000000000000000000000000000000000000000065f5a000';
+
+      fakeProvider.receiptMocks['0xFakeTxHash'] = TransactionReceipt(
+        txHash: '0xFakeTxHash',
+        blockNumber: 99,
+        status: true,
+        logs: [
+          TransactionLog(
+            address: easAddress,
+            topics: [
+              EASConstants.timestampedEventTopic,
+              inputUID,
+              timeTopic,
+            ],
+            data: '0x',
+          ),
+        ],
+      );
+
+      final result = await client.timestamp(inputUID);
+
+      expect(result, isA<TimestampResult>());
+      expect(result.txHash, equals('0xFakeTxHash'));
+      expect(result.uid, equals(inputUID));
+      expect(result.time, equals(BigInt.from(0x65f5a000)));
+    });
+
+    test('throws StateError when no Timestamped log in receipt', () async {
+      const validUid =
+          '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      fakeProvider.receiptMocks['0xFakeTxHash'] = TransactionReceipt(
+        txHash: '0xFakeTxHash',
+        blockNumber: 99,
+        status: true,
+        logs: [],
+      );
+
+      expect(
+        () => client.timestamp(validUid),
+        throwsStateError,
+      );
+    });
+
+    test('ignores Timestamped logs from wrong contract address', () async {
+      const validUid =
+          '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      fakeProvider.receiptMocks['0xFakeTxHash'] = TransactionReceipt(
+        txHash: '0xFakeTxHash',
+        blockNumber: 99,
+        status: true,
+        logs: [
+          TransactionLog(
+            address: '0xWrongAddress',
+            topics: [
+              EASConstants.timestampedEventTopic,
+              '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+              '0x0000000000000000000000000000000000000000000000000000000065f5a000',
+            ],
+            data: '0x',
+          ),
+        ],
+      );
+
+      expect(
+        () => client.timestamp(validUid),
         throwsStateError,
       );
     });

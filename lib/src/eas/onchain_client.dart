@@ -9,6 +9,7 @@ import '../rpc/transaction_receipt.dart';
 import '../models/attestation.dart';
 import '../models/attest_result.dart';
 import '../models/register_result.dart';
+import '../models/timestamp_result.dart';
 import '../utils/hex_utils.dart';
 import 'abi_encoder.dart';
 import 'eas_abis.dart';
@@ -153,12 +154,41 @@ class EASClient {
   ///
   /// Records a timestamp on the EAS contract proving the UID existed
   /// at a specific block time.
-  Future<String> timestamp(String offchainUID) async {
+  static (String uid, BigInt time) _parseTimestampedEvent(
+    List<TransactionLog> logs,
+    String contractAddress,
+  ) {
+    final lowerAddress = contractAddress.toLowerCase();
+    for (final log in logs) {
+      if (log.topics.length >= 3 &&
+          log.topics[0] == EASConstants.timestampedEventTopic &&
+          log.address.toLowerCase() == lowerAddress) {
+        final uid = log.topics[1];
+        final timeHex = log.topics[2].replaceFirst('0x', '');
+        final time = BigInt.parse(timeHex, radix: 16);
+        return (uid, time);
+      }
+    }
+
+    throw StateError(
+      'No Timestamped event found in receipt logs from $contractAddress',
+    );
+  }
+
+  /// Timestamp an offchain attestation UID onchain.
+  ///
+  /// Records a timestamp on the EAS contract proving the UID existed
+  /// at a specific block time.
+  Future<TimestampResult> timestamp(String offchainUID) async {
     final callData = buildTimestampCallData(offchainUID);
-    return await provider.sendTransaction(
+    final txHash = await provider.sendTransaction(
       to: easAddress,
       data: callData,
     );
+
+    final receipt = await provider.waitForReceipt(txHash);
+    final (uid, time) = _parseTimestampedEvent(receipt.logs, easAddress);
+    return TimestampResult(txHash: txHash, uid: uid, time: time);
   }
 
   Future<Attestation?> getAttestation(String uid) async {
