@@ -59,3 +59,9 @@
 - **Rich write-method results**: `EASClient.attest()` now returns `AttestResult(txHash, uid, blockNumber)`, `EASClient.timestamp()` returns `TimestampResult(txHash, uid, time)`, and `SchemaRegistryClient.register()` returns `RegisterResult(txHash, uid)`.
 - **Receipt abstraction boundary**: `RpcProvider.waitForReceipt()` returns library-owned `TransactionReceipt` and `TransactionLog` instead of leaking `on_chain` receipt types.
 - **Event-driven extraction**: Attestation UID and timestamp are sourced from receipt logs using event topics (`attestedEventTopic`, `timestampedEventTopic`) with address + topic filtering.
+
+### Phase 5 Fixed-Schema Sepolia Semantics
+- **Recurring Sepolia contract**: `test/integration/sepolia_onchain_test.dart` uses `SEPOLIA_EXISTING_SCHEMA_UID` and must not register schemas during normal runs.
+- **Guardrail contract**: Sepolia recurring tests require (`SEPOLIA_RPC_URL`, `SEPOLIA_PRIVATE_KEY`, `SEPOLIA_EXISTING_SCHEMA_UID`) and explicitly skip when missing/invalid; UID must be `0x`-prefixed bytes32 (length 66).
+- **Verification contract**: Recurring suite validates (1) configured UID exists, (2) zero bytes32 UID resolves as non-existent schema, and (3) onchain `attest` + `getAttestation` parity including encoded payload byte equality from `AbiEncoder.encode(...)`.
+- **Bootstrap separation**: One-time schema registration is handled outside recurring tests by `scripts/sepolia_schema_bootstrap.dart`.

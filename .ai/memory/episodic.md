@@ -106,3 +106,11 @@
 - **Status**: COMPLETED
 - **Context**: Replaced bare tx-hash returns with `AttestResult`, `TimestampResult`, and `RegisterResult`; added `RpcProvider.waitForReceipt()` and production polling in `DefaultRpcProvider`; implemented `Attested` and `Timestamped` log parsing with address+topic filtering.
 - **Verification**: Non-Sepolia suite reached 127 passing tests (`dart test --exclude-tags sepolia`). Sepolia tagged tests compile and run but depend on live RPC/network health.
+
+### [ID: PHASE5_FIXED_SCHEMA_SEPOLIA_EXEC] -> Follows [PHASE4_RECEIPT_ENHANCEMENT_EXEC]
+- **Date**: 2026-03-15
+- **Event**: Implementation of Phase 5 (Fixed Schema Sepolia Attest)
+- **Status**: COMPLETED
+- **Context**: Replaced per-run Sepolia schema registration with fixed env-driven UID usage (`SEPOLIA_EXISTING_SCHEMA_UID`) in recurring integration tests. Added explicit skip guardrails for missing/invalid env values, schema existence check for configured UID, zero-bytes32 non-existence check, and onchain attest→fetch parity assertions using LP-only schema + ABI payload equivalence.
+- **Workflow Adjustment (User-approved)**: Implemented one-time schema bootstrap as a script (`scripts/sepolia_schema_bootstrap.dart`) with concise script docs instead of a `sepolia-bootstrap` integration test file.
+- **Verification**: `dart test test/integration/sepolia_onchain_test.dart --tags sepolia -r expanded` yields explicit skips without env; `dart test --exclude-tags sepolia --exclude-tags sepolia-bootstrap -r expanded` passes (127 tests).

@@ -48,3 +48,8 @@
 - **Import collision guard**: Restrict `on_chain` imports (`show AbiFunctionFragment`) in provider abstractions/tests to avoid `TransactionReceipt` name collisions with local value objects.
 - **Timestamped topic decode**: Parse indexed `uint64` topic from hex via `BigInt.parse(topic.replaceFirst('0x', ''), radix: 16)`.
 - **Event topic verification**: Always verify hardcoded event topic constants with a test that computes `keccak256(signature)` to catch placeholder/hash mistakes.
+
+### Phase 5 Fixed-Schema Sepolia Patterns
+- **Separate bootstrap from recurring runs**: Register LP-only schema once via `dart run scripts/sepolia_schema_bootstrap.dart`, then persist printed `SEPOLIA_EXISTING_SCHEMA_UID` in `.env`.
+- **Recurring suite must stay registration-free**: `--tags sepolia` tests should use fixed UID checks and attest/fetch parity only, without calling schema registration APIs.
+- **Skip behavior should be explicit**: For network-gated integration tests, prefer group-level `skip` reason strings over silent `return` in `main()` so test output explains why tests did not run.
