@@ -42,3 +42,9 @@
 - **`blockchain_utils` Versioning**: When using `on_chain ^7.1.0`, explicitly declare `blockchain_utils: ^5.4.0` in `pubspec.yaml` to avoid version solver conflicts with the library's transitive requirements.
 - **ABI `bytes32` Encoding**: Never pass hex strings directly to `on_chain`'s `Fragment.encode` for `bytes32` parameters. Always convert to `Uint8List` using `BytesUtils.fromHexString(uid.replaceAll('0x', ''))`.
 - **Test Secrets**: Use `.env` file (loaded by `test/test_helpers/dotenv_loader.dart`) for RPC URLs and private keys. Never hardcode real keys. Provide `.env.example` with documented placeholders.
+
+### Phase 4 Receipt Workflow Patterns
+- **Receipt polling contract**: Add `waitForReceipt` on `RpcProvider` and implement in both `DefaultRpcProvider` and `FakeRpcProvider` so client logic remains fully interface-driven.
+- **Import collision guard**: Restrict `on_chain` imports (`show AbiFunctionFragment`) in provider abstractions/tests to avoid `TransactionReceipt` name collisions with local value objects.
+- **Timestamped topic decode**: Parse indexed `uint64` topic from hex via `BigInt.parse(topic.replaceFirst('0x', ''), radix: 16)`.
+- **Event topic verification**: Always verify hardcoded event topic constants with a test that computes `keccak256(signature)` to catch placeholder/hash mistakes.

@@ -99,3 +99,10 @@
 - **Context**: Successfully extracted `HexUtils` and `ByteUtils` for readable type expansions. Migrated raw inline JSON ABIs to a central `EASAbis` registry. Moved raw tuple array index-parsing into domain model factories (`Attestation.fromTuple`, `SchemaRecord.fromTuple`).
 - **Architectural Shift**: Implemented strict Dependency Injection via the `RpcProvider` interface. `EASClient` and `SchemaRegistryClient` no longer accept URL/keys, requiring a provider instance. Proved the viability of this pattern by creating `FakeRpcProvider` for instant, offline unit tests without network mocking.
 - **Verification**: Cleaned up all static analysis warnings and achieved 100% test pass rate across 98 tests (including offline E2E mock tests).
+
+### [ID: PHASE4_RECEIPT_ENHANCEMENT_EXEC] -> Follows [PHASE3_CODEBASE_REVIEW_EXEC]
+- **Date**: 2026-03-14
+- **Event**: Implementation of Phase 4 (Attestation Receipt Enhancement)
+- **Status**: COMPLETED
+- **Context**: Replaced bare tx-hash returns with `AttestResult`, `TimestampResult`, and `RegisterResult`; added `RpcProvider.waitForReceipt()` and production polling in `DefaultRpcProvider`; implemented `Attested` and `Timestamped` log parsing with address+topic filtering.
+- **Verification**: Non-Sepolia suite reached 127 passing tests (`dart test --exclude-tags sepolia`). Sepolia tagged tests compile and run but depend on live RPC/network health.

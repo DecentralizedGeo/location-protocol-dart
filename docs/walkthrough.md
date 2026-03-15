@@ -1,51 +1,44 @@
-# Phase 3 Walkthrough: Architectural Clarity & Testability
+# Phase 4 Walkthrough: Attestation Receipt Enhancement
 
 ## Overview
 
-In Phase 3 of the Location Protocol Dart library implementation, we focused intensely on improving code readability, maintainability, and test coverage through the application of design patterns and clear abstractions. The primary goal was to make the codebase robust and easier to understand for incoming developers.
+Phase 4 upgrades write-method outputs from bare transaction hashes to rich result objects that include receipt-derived metadata.
 
-## Structural Clarity Gained
+- `EASClient.attest()` now returns `AttestResult` with `txHash`, `uid`, and `blockNumber`.
+- `EASClient.timestamp()` now returns `TimestampResult` with `txHash`, `uid`, and anchored `time`.
+- `SchemaRegistryClient.register()` now returns `RegisterResult` with `txHash` and deterministic schema `uid`.
 
-### 1. Robust Type Extensions (`HexUtils` and `ByteUtils`)
-We moved away from raw hexadecimal manipulation and replaced it with strict, readable extension methods.
-*   **Before:** `BytesUtils.fromHexString(str.replaceAll('0x', ''))`
-*   **After:** `str.toBytes()` (via `HexStringX`)
-*   Added `ByteUtils` for explicit big-endian number-to-byte conversions (`uint16ToBytes`, `uint64ToBytes`).
+## Receipt Polling Model
 
-### 2. ABI Registry (`EASAbis`)
-We removed visually polluting inline JSON fragments from our domain clients and created a static registry.
-*   `EASAbis.timestamp`, `EASAbis.attest`, `EASAbis.getAttestation`, `EASAbis.registerSchema`, `EASAbis.getSchema` are now strongly typed, central definitions.
+A new `RpcProvider.waitForReceipt(...)` contract was introduced and implemented across provider implementations:
 
-### 3. Encapsulated Tuple Decoding
-Domain models now know how to self-hydrate from raw ABI-decoded lists. This pulled unreadable index parsing out of the clients and into cohesive domain structures.
-*   `Attestation.fromTuple(List<dynamic> raw)`
-*   `SchemaRecord.fromTuple(List<dynamic> raw)`
+- `DefaultRpcProvider.waitForReceipt()` polls `eth_getTransactionReceipt` until mined.
+- Polling uses a configurable timeout (`receiptTimeout`, default 2 minutes) and poll interval override.
+- Reverted transactions (`status == false`) throw `StateError`.
+- Mapped return type is library-owned (`TransactionReceipt` and `TransactionLog`) to keep `on_chain` internals out of public contracts.
 
-### 4. Interface-Driven Dependency Injection (`RpcProvider`)
-This was the core architectural shift. We decoupled our high-level logic from the low-level `on_chain` and HTTP request implementations.
-*   **Before:** Clients instantiated `RpcHelper` directly with `rpcUrl` and `privateKeyHex`.
-*   **After:** We introduced the `RpcProvider` interface. Our clients (`EASClient`, `SchemaRegistryClient`) now require an `RpcProvider` instance in their constructors.
-*   The old `RpcHelper` became `DefaultRpcProvider`.
+## Event Parsing Flow
 
-## The Payoff: Pure Offline Testability
+Receipt logs are filtered with **topic + contract address** checks:
 
-By enforcing Dependency Injection via `RpcProvider`, we enabled the creation of `FakeRpcProvider`. This allows us to write instant, purely offline unit tests for our clients without relying on a brittle HTTP mocking layer or an `.env` file configuration.
+- `Attested(address,address,bytes32,bytes32)` → extracts UID from `log.data`.
+- `Timestamped(bytes32,uint64)` → extracts UID from `topics[1]` and timestamp from `topics[2]`.
 
-```dart
-// Example of instant offline test achieved via our architecture
-test('EASClient handles missing attestation purely offline', () async {
-  final fakeProvider = FakeRpcProvider();
-  
-  // Predictably mock the contract call output
-  fakeProvider.contractCallMocks['getAttestation'] = [ ... ];
+Constants now include verified topic hashes:
 
-  final client = EASClient(provider: fakeProvider);
-  final result = await client.getAttestation('0xMiss');
-  
-  expect(result, isNull);
-});
-```
+- `EASConstants.attestedEventTopic`
+- `EASConstants.timestampedEventTopic`
 
-## Summary
+## Testing and Mocking
 
-The Location Protocol Dart library is now structurally sound, logically separated into domain definitions and RPC transport layers, and verified by pure unit tests alongside robust on-chain integration tests. All warnings and errors from our strict static analysis have been eliminated.
+Offline tests now use `FakeRpcProvider.receiptMocks` to inject deterministic mined receipts:
+
+- Unit coverage added for `TransactionReceipt`/`TransactionLog`.
+- Unit coverage added for `AttestResult`, `TimestampResult`, `RegisterResult`.
+- Offline client tests cover success + failure paths for missing/wrong logs.
+
+## Verification Snapshot
+
+- `dart test --exclude-tags sepolia`: **127 passed**
+- `dart analyze`: reports pre-existing issues in `test_tx.dart` (outside this phase scope)
+- `dart test --tags sepolia`: executes but depends on live RPC/network state

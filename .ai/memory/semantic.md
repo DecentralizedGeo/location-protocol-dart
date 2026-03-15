@@ -54,3 +54,8 @@
 - JSON Schema (Draft 07) based validation using [official LP schema](https://raw.githubusercontent.com/DecentralizedGeo/location-protocol-spec/refs/heads/main/json-schema/schema.json)
 - Delegated attestation, batch operations, revocation
 - `web3_signers` integration for hardware-backed signing (Secure Enclave, passkeys)
+
+### Phase 4 Receipt Enhancement Semantics
+- **Rich write-method results**: `EASClient.attest()` now returns `AttestResult(txHash, uid, blockNumber)`, `EASClient.timestamp()` returns `TimestampResult(txHash, uid, time)`, and `SchemaRegistryClient.register()` returns `RegisterResult(txHash, uid)`.
+- **Receipt abstraction boundary**: `RpcProvider.waitForReceipt()` returns library-owned `TransactionReceipt` and `TransactionLog` instead of leaking `on_chain` receipt types.
+- **Event-driven extraction**: Attestation UID and timestamp are sourced from receipt logs using event topics (`attestedEventTopic`, `timestampedEventTopic`) with address + topic filtering.
