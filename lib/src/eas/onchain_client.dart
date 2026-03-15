@@ -5,7 +5,10 @@ import '../schema/schema_definition.dart';
 import '../config/chain_config.dart';
 import '../schema/schema_uid.dart';
 import '../rpc/rpc_provider.dart';
+import '../rpc/transaction_receipt.dart';
 import '../models/attestation.dart';
+import '../models/attest_result.dart';
+import '../models/register_result.dart';
 import '../utils/hex_utils.dart';
 import 'abi_encoder.dart';
 import 'eas_abis.dart';
@@ -94,7 +97,28 @@ class EASClient {
   /// Submit an onchain attestation.
   ///
   /// Requires the schema to already be registered on-chain.
-  Future<String> attest({
+  static String _parseAttestedUID(
+    List<TransactionLog> logs,
+    String contractAddress,
+  ) {
+    final lowerAddress = contractAddress.toLowerCase();
+    for (final log in logs) {
+      if (log.topics.isNotEmpty &&
+          log.topics[0] == EASConstants.attestedEventTopic &&
+          log.address.toLowerCase() == lowerAddress) {
+        return log.data;
+      }
+    }
+
+    throw StateError(
+      'No Attested event found in receipt logs from $contractAddress',
+    );
+  }
+
+  /// Submit an onchain attestation.
+  ///
+  /// Requires the schema to already be registered on-chain.
+  Future<AttestResult> attest({
     required SchemaDefinition schema,
     required LPPayload lpPayload,
     required Map<String, dynamic> userData,
@@ -111,9 +135,17 @@ class EASClient {
       refUID: refUID,
     );
 
-    return await provider.sendTransaction(
+    final txHash = await provider.sendTransaction(
       to: easAddress,
       data: callData,
+    );
+
+    final receipt = await provider.waitForReceipt(txHash);
+    final uid = _parseAttestedUID(receipt.logs, easAddress);
+    return AttestResult(
+      txHash: txHash,
+      uid: uid,
+      blockNumber: receipt.blockNumber,
     );
   }
 
@@ -144,7 +176,7 @@ class EASClient {
   }
 
   /// Register a schema on-chain. Convenience wrapper around [SchemaRegistryClient].
-  Future<String> registerSchema(SchemaDefinition schema) async {
+  Future<RegisterResult> registerSchema(SchemaDefinition schema) async {
     final registry = SchemaRegistryClient(
       provider: provider,
     );
