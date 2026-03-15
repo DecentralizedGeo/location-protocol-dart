@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import '../schema/schema_definition.dart';
 import '../schema/schema_uid.dart';
+import '../models/register_result.dart';
 import '../config/chain_config.dart';
 import '../rpc/rpc_provider.dart';
 import '../utils/hex_utils.dart';
@@ -57,16 +58,18 @@ class SchemaRegistryClient {
 
   /// Registers a schema on-chain.
   ///
-  /// Sends a transaction to `SchemaRegistry.register()` and returns
-  /// the transaction hash.
+  /// Sends a transaction to `SchemaRegistry.register()` and returns a
+  /// [RegisterResult] with the transaction hash and deterministic schema UID.
   ///
   /// Requires an RPC connection and a funded wallet.
-  Future<String> register(SchemaDefinition schema) async {
+  Future<RegisterResult> register(SchemaDefinition schema) async {
     final callData = buildRegisterCallData(schema);
-    return await provider.sendTransaction(
+    final txHash = await provider.sendTransaction(
       to: contractAddress,
       data: callData,
     );
+    final uid = SchemaUID.compute(schema);
+    return RegisterResult(txHash: txHash, uid: uid);
   }
 
   Future<SchemaRecord?> getSchema(String uid) async {
