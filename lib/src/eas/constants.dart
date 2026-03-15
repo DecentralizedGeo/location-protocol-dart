@@ -42,4 +42,16 @@ class EASConstants {
   static String saltToHex(Uint8List salt) {
     return BytesUtils.toHexString(salt, prefix: '0x');
   }
+
+  /// keccak256 hash of `"Attested(address,address,bytes32,bytes32)"`.
+  ///
+  /// Used to identify `Attested` event logs in transaction receipts.
+  static const String attestedEventTopic =
+      '0x8bf46bf4cfd674fa735a3d63ec1c9ad4153f033c290341f3a588b75685141b35';
+
+  /// keccak256 hash of `"Timestamped(bytes32,uint64)"`.
+  ///
+  /// Used to identify `Timestamped` event logs in transaction receipts.
+  static const String timestampedEventTopic =
+      '0x5aafceeb1c7ad58e4a84898bdee37c02c0fc46e7d24e6b60e8209449f183459f';
 }

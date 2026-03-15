@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:blockchain_utils/blockchain_utils.dart';
 import 'package:test/test.dart';
 import 'package:location_protocol/src/eas/constants.dart';
 
@@ -45,6 +48,24 @@ void main() {
       final hex = EASConstants.saltToHex(salt);
       expect(hex, startsWith('0x'));
       expect(hex.length, equals(66));
+    });
+
+    test('attestedEventTopic matches keccak256 of Attested event signature', () {
+      final sig = 'Attested(address,address,bytes32,bytes32)';
+      final hash = QuickCrypto.keccack256Hash(
+        Uint8List.fromList(utf8.encode(sig)),
+      );
+      final expected = '0x${BytesUtils.toHexString(hash)}';
+      expect(EASConstants.attestedEventTopic, equals(expected));
+    });
+
+    test('timestampedEventTopic matches keccak256 of Timestamped event signature', () {
+      final sig = 'Timestamped(bytes32,uint64)';
+      final hash = QuickCrypto.keccack256Hash(
+        Uint8List.fromList(utf8.encode(sig)),
+      );
+      final expected = '0x${BytesUtils.toHexString(hash)}';
+      expect(EASConstants.timestampedEventTopic, equals(expected));
     });
   });
 }
