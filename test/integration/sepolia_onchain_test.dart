@@ -43,22 +43,22 @@ void main() {
         ],
       );
 
-      final txHash = await registry.register(schema);
-      expect(txHash, startsWith('0x'));
-      expect(txHash.length, equals(66));
+      final result = await registry.register(schema);
+      expect(result.txHash, startsWith('0x'));
+      expect(result.txHash.length, equals(66));
+      expect(result.uid, equals(SchemaRegistryClient.computeSchemaUID(schema)));
 
-      print('Schema registered. TX: $txHash');
-      print('Expected UID: ${SchemaRegistryClient.computeSchemaUID(schema)}');
+      print('Schema registered. TX: ${result.txHash}');
+      print('Schema UID: ${result.uid}');
     }, timeout: const Timeout(Duration(minutes: 2)));
 
     test('timestamp an offchain attestation on Sepolia', () async {
-      final client = EASClient(
-        provider: DefaultRpcProvider(
-          rpcUrl: rpcUrl,
-          privateKeyHex: privateKey,
-          chainId: 11155111,
-        ),
+      final provider = DefaultRpcProvider(
+        rpcUrl: rpcUrl,
+        privateKeyHex: privateKey,
+        chainId: 11155111,
       );
+      final client = EASClient(provider: provider);
 
       // First create an offchain attestation to get a UID
       final schema = SchemaDefinition(fields: []);
@@ -79,12 +79,15 @@ void main() {
         userData: {},
       );
 
-      final txHash = await client.timestamp(signed.uid);
-      expect(txHash, startsWith('0x'));
-      expect(txHash.length, equals(66));
+      final result = await client.timestamp(signed.uid);
+      expect(result.txHash, startsWith('0x'));
+      expect(result.txHash.length, equals(66));
+      expect(result.uid, equals(signed.uid));
+      expect(result.time, greaterThan(BigInt.zero));
 
-      print('Timestamp TX: $txHash');
-      print('Timestamped UID: ${signed.uid}');
+      print('Timestamp TX: ${result.txHash}');
+      print('Timestamped UID: ${result.uid}');
+      print('Anchored at: ${result.time}');
     }, timeout: const Timeout(Duration(minutes: 2)));
   });
 }
