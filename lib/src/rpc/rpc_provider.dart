@@ -1,5 +1,7 @@
 import 'dart:typed_data';
-import 'package:on_chain/on_chain.dart';
+import 'package:on_chain/on_chain.dart' show AbiFunctionFragment;
+
+import 'transaction_receipt.dart';
 
 /// Abstract interface for on-chain state queries and transaction submission.
 abstract class RpcProvider {
@@ -21,6 +23,16 @@ abstract class RpcProvider {
     required String contractAddress,
     required AbiFunctionFragment function,
     List<dynamic> params = const [],
+  });
+
+  /// Polls `eth_getTransactionReceipt` until the transaction is mined,
+  /// then returns a typed receipt.
+  ///
+  /// Throws [TimeoutException] if [timeout] elapses before the tx is mined.
+  Future<TransactionReceipt> waitForReceipt(
+    String txHash, {
+    Duration? timeout,
+    Duration pollInterval = const Duration(seconds: 4),
   });
   
   /// Closes underlying resources.

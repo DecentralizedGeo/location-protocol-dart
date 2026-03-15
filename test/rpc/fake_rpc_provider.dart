@@ -1,9 +1,11 @@
 import 'dart:typed_data';
-import 'package:on_chain/on_chain.dart';
+import 'package:on_chain/on_chain.dart' show AbiFunctionFragment;
 import 'package:location_protocol/src/rpc/rpc_provider.dart';
+import 'package:location_protocol/src/rpc/transaction_receipt.dart';
 
 class FakeRpcProvider implements RpcProvider {
   final Map<String, List<dynamic>> contractCallMocks = {};
+  final Map<String, TransactionReceipt> receiptMocks = {};
   String? lastTransactionTo;
   Uint8List? lastTransactionData;
 
@@ -32,6 +34,21 @@ class FakeRpcProvider implements RpcProvider {
   }) async {
     final key = function.name;
     return contractCallMocks[key] ?? [];
+  }
+
+  @override
+  Future<TransactionReceipt> waitForReceipt(
+    String txHash, {
+    Duration? timeout,
+    Duration pollInterval = const Duration(seconds: 4),
+  }) async {
+    return receiptMocks[txHash] ??
+        TransactionReceipt(
+          txHash: txHash,
+          blockNumber: 1,
+          status: true,
+          logs: const [],
+        );
   }
 
   @override
