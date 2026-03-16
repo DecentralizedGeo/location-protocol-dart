@@ -13,7 +13,7 @@
 
 `location_protocol` is a schema-agnostic Dart library implementing the [Location Protocol](https://spec.decentralizedgeo.org/introduction/overview/) base data model on top of [EAS (Ethereum Attestation Service)](https://docs.attest.org/docs/core--concepts/how-eas-works). It provides the full lifecycle for spatial attestations: payload construction, schema definition, ABI encoding, EIP-712 offchain signing, and onchain EAS operations.
 
-The library supports both offchain (EIP-712, no gas) and onchain ([EIP-1559](https://eips.ethereum.org/EIPS/eip-1559)) attestations, giving you a flexible spectrum from fully local signatures to immutably anchored on-chain records.
+The library supports both offchain ([EIP-712](https://eips.ethereum.org/EIPS/eip-712), no gas) and onchain ([EIP-1559](https://eips.ethereum.org/EIPS/eip-1559)) attestations, giving you a flexible spectrum from fully local signatures to immutably anchored on-chain records.
 
 This library provides the Dart equivalent of the signature service layer in the [Astral SDK](https://github.com/DecentralizedGeo/astral-sdk), adapted for mobile and multi-platform Dart deployments, without hard-coding any particular schema. Pure Dart — no Flutter dependency; works in CLI, servers, Flutter apps, and all major compilation targets (web via JS/Wasm, Android, iOS, macOS, Windows, Linux).
 
