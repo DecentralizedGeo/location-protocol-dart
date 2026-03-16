@@ -122,3 +122,14 @@
 - **Context**: Added `LocationValidator` with canonical type dispatch, shape/deep validators (coordinates, GeoJSON, H3, geohash, WKT, address, scaledCoordinates), custom registration with built-in override prevention, and `LPPayload(validateLocation: true|false)` wiring.
 - **Migration + docs**: Migrated downstream LP fixtures to canonical valid types/shapes, exported validator in package barrel, removed geobase spike test after permanent coverage, and updated memory + walkthrough docs.
 - **Verification**: Phase gates passed for LP, EAS, integration (including Sepolia-tag run), and full non-Sepolia regression; `dart analyze` still reports pre-existing unrelated workspace issues while touched Phase 6 files are diagnostics-clean.
+
+### [ID: PHASE7_DOC_SNIPPET_VALIDATION_EXEC] -> Follows [PHASE6_LOCATION_VALIDATION_EXEC]
+- **Date**: 2026-03-16
+- **Event**: Implementation of Phase 7 (Documentation Snippet Extraction & Validation)
+- **Status**: COMPLETED
+- **Context**: Added `scripts/docs_snippet_extractor.dart` to scan docs, extract fenced Dart snippets, classify step/error/standalone blocks, and generate `test/docs/docs_snippets_test.dart` as a derived artifact with `@Tags(['doc-snippets'])`.
+- **Key Findings**:
+	- Fixed CRLF fence parsing to avoid missing snippets in Windows-authored markdown files.
+	- Added generation-time normalization for utility snippets that call `tearDown(...)` so they execute safely in runtime tests.
+	- Stabilized Sepolia doc-snippet execution by skip-guarding duplicate mempool transaction errors (`already known`) while preserving core snippet execution.
+- **Verification**: Offline doc-snippet suite passes, Sepolia doc-snippet suite passes in-session, full non-Sepolia suite passes, and generator output is idempotent across two consecutive runs.

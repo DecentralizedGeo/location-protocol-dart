@@ -106,3 +106,36 @@ Built-ins cannot be overridden. Duplicate custom registrations replace prior cus
 ### Migration bypass
 
 `LPPayload(validateLocation: false)` bypasses only location type dispatch while keeping semver, URI, and null checks active.
+
+## Phase 7: Documentation Snippet Extraction & Validation
+
+Phase 7 adds an automated documentation validation pipeline that extracts Dart snippets from docs and generates executable tests.
+
+### New script
+
+- `scripts/docs_snippet_extractor.dart`
+
+The script scans `README.md` and `docs/guides/*.md`, extracts fenced `dart` blocks, classifies them, and generates:
+
+- `test/docs/docs_snippets_test.dart`
+
+### Generation behavior
+
+- Reconstructs step-sequence tutorials by accumulating prior step code into each step test.
+- Skips blockquote code fences (`> ```dart`) as non-goal supplementary snippets.
+- Converts placeholder keys (`YOUR_PRIVATE_KEY_HEX`) to the standard test key.
+- Adds `tearDown(() => LocationValidator.resetCustomTypes())` for custom type groups.
+- Wraps negative snippets in `expect(throwsA(isA<ArgumentError>()))`.
+- Adapts RPC snippets to `.env` loading via `loadDotEnv()` and tags RPC groups with `sepolia`.
+
+### Verification snapshot
+
+- `dart test --exclude-tags sepolia`: passes.
+- `dart test --tags doc-snippets --exclude-tags sepolia -r expanded`: passes.
+- `dart test test/docs/docs_snippets_test.dart --tags sepolia -r expanded`: passes in this environment.
+- Generator idempotency verified by matching SHA-256 hashes across two runs.
+
+### Operational notes
+
+- `test/docs/docs_snippets_test.dart` is a derived artifact and should be regenerated, not edited manually.
+- `dart_test.yaml` now includes a `doc-snippets` tag for targeted execution.
