@@ -3,3 +3,8 @@ tags:
     # Tests requiring a live Sepolia RPC connection.
     # Run with: dart test --tags sepolia
     # Requires .env file with SEPOLIA_RPC_URL and SEPOLIA_PRIVATE_KEY
+  doc-snippets:
+    # Auto-generated documentation snippet validation tests.
+    # Regenerate with: dart run scripts/docs_snippet_extractor.dart
+    # Run offline: dart test --tags doc-snippets --exclude-tags sepolia
+    # Run all:     dart test --tags doc-snippets

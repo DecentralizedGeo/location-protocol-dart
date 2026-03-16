@@ -28,3 +28,41 @@ After it succeeds, copy the printed `SEPOLIA_EXISTING_SCHEMA_UID` into your `.en
 ```bash
 dart test --tags sepolia -r expanded
 ```
+
+## `docs_snippet_extractor.dart`
+
+Extracts all `````dart`` code blocks from `README.md` and `docs/guides/*.md`, then generates `test/docs/docs_snippets_test.dart` — a complete test file that validates every documentation code snippet compiles and runs without error.
+
+**When to run:** After modifying any documentation that contains Dart code examples. The generated test file is a derived artifact and should not be edited manually.
+
+**What it does:**
+- Scans markdown files for fenced `dart` code blocks
+- Auto-detects tutorial step sequences (`## Step 1`, `## Step 2`, etc.)
+- Reconstructs step sequences by accumulating prior step code into each test
+- Substitutes placeholder private keys with a well-known test key
+- Injects prerequisite code for documents that reference the tutorial
+- Wraps error-demonstrating snippets in `expect(throwsA(...))` assertions
+- Tags RPC-dependent tests with `sepolia` for conditional execution
+
+### Run
+
+```bash
+dart run scripts/docs_snippet_extractor.dart
+```
+
+Options:
+- `--output <path>` — Override output file (default: `test/docs/docs_snippets_test.dart`)
+- `--verbose` — Print detailed extraction info
+
+### Test the generated file
+
+```bash
+# Offline tests only (no RPC needed)
+dart test --tags doc-snippets --exclude-tags sepolia
+
+# All doc snippet tests (requires .env with Sepolia credentials)
+dart test --tags doc-snippets
+
+# Expanded output
+dart test --tags doc-snippets --exclude-tags sepolia -r expanded
+```
