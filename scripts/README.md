@@ -1,5 +1,15 @@
 # Sepolia Bootstrap Scripts
 
+## Table of Contents
+- [Sepolia Bootstrap Scripts](#sepolia-bootstrap-scripts)
+  - [Table of Contents](#table-of-contents)
+  - [Purpose](#purpose)
+  - [`sepolia_schema_bootstrap.dart`](#sepolia_schema_bootstrapdart)
+  - [Run](#run)
+  - [`docs_snippet_extractor.dart`](#docs_snippet_extractordart)
+    - [Run](#run-1)
+    - [Test the generated file](#test-the-generated-file)
+
 ## Purpose
 
 This folder contains one-off utilities that should **not** be part of recurring integration test runs.
