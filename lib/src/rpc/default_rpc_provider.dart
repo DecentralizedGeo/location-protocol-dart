@@ -256,8 +256,8 @@ class DefaultRpcProvider implements RpcProvider {
               .map(
                 (log) => tx.TransactionLog(
                   address: log.address,
-                  topics: log.topics?.map((topic) => topic.toString()).toList() ?? const [],
-                  data: log.data ?? '0x',
+                  topics: log.topics.map((topic) => topic.toString()).toList(),
+                  data: log.data,
                 ),
               )
               .toList(),

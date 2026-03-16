@@ -155,15 +155,6 @@ class LocationValidator {
     }
   }
 
-  static void _validateString(dynamic location) {
-    if (location is! String) {
-      throw ArgumentError(
-        'This location type requires a String. '
-        'Got: ${location.runtimeType}',
-      );
-    }
-  }
-
   static void _validateH3(dynamic location) {
     if (location is! String) {
       throw ArgumentError(
