@@ -38,7 +38,7 @@ void main() {
       final lpPayload = LPPayload(
         lpVersion: '1.0.0',
         srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
-        locationType: 'geojson-point',
+        locationType: 'address',
         location: 'test-location',
       );
 

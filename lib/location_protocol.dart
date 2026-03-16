@@ -6,6 +6,7 @@ library location_protocol;
 export 'src/lp/lp_payload.dart';
 export 'src/lp/lp_version.dart';
 export 'src/lp/location_serializer.dart';
+export 'src/lp/location_validator.dart';
 
 // Schema layer
 export 'src/schema/schema_field.dart';

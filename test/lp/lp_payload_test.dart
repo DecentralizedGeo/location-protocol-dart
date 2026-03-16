@@ -127,5 +127,109 @@ void main() {
         );
       });
     });
+
+    group('location type validation (strict)', () {
+      test('rejects unknown locationType by default', () {
+        expect(
+          () => LPPayload(
+            lpVersion: '1.0.0',
+            srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+            locationType: 'banana',
+            location: 'some-data',
+          ),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.message,
+              'message',
+              contains('Unknown location type'),
+            ),
+          ),
+        );
+      });
+
+      test('rejects Dart-type mismatch (geojson-point with List)', () {
+        expect(
+          () => LPPayload(
+            lpVersion: '1.0.0',
+            srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+            locationType: 'geojson-point',
+            location: [-103.77, 44.96],
+          ),
+          throwsA(
+            isA<ArgumentError>().having(
+              (e) => e.message,
+              'message',
+              contains('requires a Map'),
+            ),
+          ),
+        );
+      });
+
+      test('accepts valid geojson-point with Map', () {
+        expect(
+          () => LPPayload(
+            lpVersion: '1.0.0',
+            srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+            locationType: 'geojson-point',
+            location: {'type': 'Point', 'coordinates': [-103.77, 44.96]},
+          ),
+          returnsNormally,
+        );
+      });
+    });
+
+    group('validateLocation bypass', () {
+      test('bypasses location validation when false', () {
+        expect(
+          () => LPPayload(
+            lpVersion: '1.0.0',
+            srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+            locationType: 'banana',
+            location: 'anything',
+            validateLocation: false,
+          ),
+          returnsNormally,
+        );
+      });
+
+      test('still validates lpVersion when bypass is set', () {
+        expect(
+          () => LPPayload(
+            lpVersion: 'bad',
+            srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+            locationType: 'banana',
+            location: 'anything',
+            validateLocation: false,
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+
+      test('still validates srs when bypass is set', () {
+        expect(
+          () => LPPayload(
+            lpVersion: '1.0.0',
+            srs: 'not-a-uri',
+            locationType: 'banana',
+            location: 'anything',
+            validateLocation: false,
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+
+      test('still rejects null location when bypass is set', () {
+        expect(
+          () => LPPayload(
+            lpVersion: '1.0.0',
+            srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+            locationType: 'geojson-point',
+            location: null,
+            validateLocation: false,
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+    });
   });
 }

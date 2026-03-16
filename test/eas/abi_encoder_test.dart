@@ -63,7 +63,7 @@ void main() {
         lpVersion: '1.0.0',
         srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
         locationType: 'geojson-point',
-        location: '{"type":"Point","coordinates":[-103.771556,44.967243]}',
+        location: {'type': 'Point', 'coordinates': [-103.771556, 44.967243]},
       );
 
       final data = {
@@ -85,8 +85,8 @@ void main() {
       final lpPayload = LPPayload(
         lpVersion: '1.0.0',
         srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
-        locationType: 'geojson-point',
-        location: 'test',
+        locationType: 'h3',
+        location: '8928308280fffff',
       );
 
       expect(
@@ -106,8 +106,8 @@ void main() {
       final lpPayload = LPPayload(
         lpVersion: '1.0.0',
         srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
-        locationType: 'geojson-point',
-        location: 'test',
+        locationType: 'h3',
+        location: '8928308280fffff',
       );
 
       expect(
@@ -153,7 +153,7 @@ void main() {
       final lpPayload = LPPayload(
         lpVersion: '1.0.0',
         srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
-        locationType: 'point',
+        locationType: 'address',
         location: '0,0',
       );
 

@@ -1,3 +1,5 @@
+import 'package:location_protocol/src/lp/location_validator.dart';
+
 /// A validated Location Protocol base data model payload.
 ///
 /// Contains the 4 required fields per the LP specification:
@@ -13,6 +15,7 @@ class LPPayload {
   final String srs;
   final String locationType;
   final dynamic location;
+  final bool validateLocation;
 
   /// Creates a validated LP payload.
   ///
@@ -22,6 +25,7 @@ class LPPayload {
     required this.srs,
     required this.locationType,
     required this.location,
+    this.validateLocation = true,
   }) {
     _validate();
   }
@@ -61,6 +65,10 @@ class LPPayload {
     // location: must be non-null
     if (location == null) {
       throw ArgumentError.notNull('location');
+    }
+
+    if (validateLocation) {
+      LocationValidator.validate(locationType, location);
     }
   }
 }
