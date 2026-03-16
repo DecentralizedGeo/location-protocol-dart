@@ -65,3 +65,11 @@
 - **Guardrail contract**: Sepolia recurring tests require (`SEPOLIA_RPC_URL`, `SEPOLIA_PRIVATE_KEY`, `SEPOLIA_EXISTING_SCHEMA_UID`) and explicitly skip when missing/invalid; UID must be `0x`-prefixed bytes32 (length 66).
 - **Verification contract**: Recurring suite validates (1) configured UID exists, (2) zero bytes32 UID resolves as non-existent schema, and (3) onchain `attest` + `getAttestation` parity including encoded payload byte equality from `AbiEncoder.encode(...)`.
 - **Bootstrap separation**: One-time schema registration is handled outside recurring tests by `scripts/sepolia_schema_bootstrap.dart`.
+
+### Phase 6 Location Type Structural Validation
+- **LocationValidator boundary**: `LocationValidator` validates `locationType` + `location` at `LPPayload` construction time via `LPPayload._validate()`.
+- **Canonical type contract**: Built-ins are `coordinate-decimal+lon-lat`, `geojson-point`, `geojson-line`, `geojson-polygon`, `h3`, `geohash`, `wkt`, `address`, `scaledCoordinates`.
+- **Deep validation semantics**: Coordinate bounds, GeoJSON parsing (Point/LineString/Polygon), H3 and geohash regex checks, WKT parser-backed checks, trimmed non-empty address, and numeric `scaledCoordinates` keys.
+- **Error surface**: Built-in validator failures are normalized to `ArgumentError` at constructor-time boundaries.
+- **Registration rules**: Built-ins cannot be overridden; custom type registration is supported with duplicate custom registrations replacing prior custom validators.
+- **Migration safety**: `LPPayload(validateLocation: false)` bypasses type dispatch only; semver, URI, and null checks still run.

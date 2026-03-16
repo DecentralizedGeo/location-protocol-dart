@@ -28,3 +28,4 @@
 - **Forget the Noise**: Avoid temporary variables or minor lint fixes.
 - **Selective Retention**: Identify 1-3 critical insights per batch.
 - **Temporal Chaining**: In `episodic.md`, always link to the previous event ID.
+- **Phase Close-out Hygiene**: Before declaring a phase complete, ensure memory files are updated where relevant (especially `episodic.md`, and `preferences.md` only when a stable preference changed).

@@ -53,3 +53,10 @@
 - **Separate bootstrap from recurring runs**: Register LP-only schema once via `dart run scripts/sepolia_schema_bootstrap.dart`, then persist printed `SEPOLIA_EXISTING_SCHEMA_UID` in `.env`.
 - **Recurring suite must stay registration-free**: `--tags sepolia` tests should use fixed UID checks and attest/fetch parity only, without calling schema registration APIs.
 - **Skip behavior should be explicit**: For network-gated integration tests, prefer group-level `skip` reason strings over silent `return` in `main()` so test output explains why tests did not run.
+
+### Phase 6 Validation Patterns
+- **Build-then-wire sequencing**: Implement and harden `LocationValidator` tests first, migrate downstream fixtures second, then wire into `LPPayload` to avoid broad fixture breakage.
+- **Static registry isolation**: Any tests that call `LocationValidator.register(...)` must use `tearDown(() => LocationValidator.resetCustomTypes())` to avoid test-order pollution.
+- **Parser exception normalization**: Catch parser `FormatException` and throw `ArgumentError` so callers observe one validation error type at API boundaries.
+- **Fixture migration preference**: For tests focused on encoding/signing/network behavior (not validation semantics), prefer canonical valid fixtures (for example `address` + string) over bypassing validation.
+- **Bypass scope discipline**: Use `validateLocation: false` only as a temporary migration tool; keep all other constructor validations active.

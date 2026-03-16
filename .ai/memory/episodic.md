@@ -114,3 +114,11 @@
 - **Context**: Replaced per-run Sepolia schema registration with fixed env-driven UID usage (`SEPOLIA_EXISTING_SCHEMA_UID`) in recurring integration tests. Added explicit skip guardrails for missing/invalid env values, schema existence check for configured UID, zero-bytes32 non-existence check, and onchain attest→fetch parity assertions using LP-only schema + ABI payload equivalence.
 - **Workflow Adjustment (User-approved)**: Implemented one-time schema bootstrap as a script (`scripts/sepolia_schema_bootstrap.dart`) with concise script docs instead of a `sepolia-bootstrap` integration test file.
 - **Verification**: `dart test test/integration/sepolia_onchain_test.dart --tags sepolia -r expanded` yields explicit skips without env; `dart test --exclude-tags sepolia --exclude-tags sepolia-bootstrap -r expanded` passes (127 tests).
+
+### [ID: PHASE6_LOCATION_VALIDATION_EXEC] -> Follows [PHASE5_FIXED_SCHEMA_SEPOLIA_EXEC]
+- **Date**: 2026-03-16
+- **Event**: Implementation of Phase 6 (Location Type Structural Validation)
+- **Status**: COMPLETED
+- **Context**: Added `LocationValidator` with canonical type dispatch, shape/deep validators (coordinates, GeoJSON, H3, geohash, WKT, address, scaledCoordinates), custom registration with built-in override prevention, and `LPPayload(validateLocation: true|false)` wiring.
+- **Migration + docs**: Migrated downstream LP fixtures to canonical valid types/shapes, exported validator in package barrel, removed geobase spike test after permanent coverage, and updated memory + walkthrough docs.
+- **Verification**: Phase gates passed for LP, EAS, integration (including Sepolia-tag run), and full non-Sepolia regression; `dart analyze` still reports pre-existing unrelated workspace issues while touched Phase 6 files are diagnostics-clean.
