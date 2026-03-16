@@ -96,9 +96,17 @@ See [Environment configuration reference](reference-environment.md) for how to s
   print('Transaction: ${registerResult.txHash}');
 ```
 
-> **Note:** If the schema is already registered (same schema string + resolver + revocable), the transaction will revert. The UID is deterministic, so you can call `SchemaRegistryClient.computeSchemaUID(schema)` locally first and skip registration if the schema already exists on-chain.
+> **Note:** `register()` automatically checks whether the schema already exists before sending a transaction. If it does, the call returns immediately with `RegisterResult.alreadyExisted == true` and a `null` `txHash` — no gas is spent. You can branch on this:
 >
-> **Note:** `register()` broadcasts the transaction and returns immediately — it does not wait for the transaction to be mined. The `RegisterResult.uid` is computed locally from the schema parameters rather than extracted from a receipt. If you need confirmation that the transaction was mined before proceeding, poll `provider.waitForReceipt(registerResult.txHash)` manually.
+> ```dart
+> if (registerResult.alreadyExisted) {
+>   print('Schema already on-chain — reusing UID: ${registerResult.uid}');
+> } else {
+>   print('Registered: ${registerResult.txHash}');
+> }
+> ```
+>
+> **Note:** When a new registration is submitted, `register()` broadcasts the transaction and returns immediately — it does not wait for the transaction to be mined. The UID is computed locally. If you need confirmation the transaction was mined before proceeding, poll `provider.waitForReceipt(registerResult.txHash!)` manually.
 
 ---
 

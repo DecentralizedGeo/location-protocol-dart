@@ -32,9 +32,14 @@ Future<void> main() async {
   try {
     final result = await registry.register(lpOnlySchema);
 
-    stdout.writeln('✅ Registration submitted');
-    stdout.writeln('   TX Hash: ${result.txHash}');
-    stdout.writeln('   UID:     ${result.uid}');
+    if (result.alreadyExisted) {
+      stdout.writeln('ℹ️  Schema already registered on-chain (no transaction sent)');
+      stdout.writeln('   UID: ${result.uid}');
+    } else {
+      stdout.writeln('✅ Registration submitted');
+      stdout.writeln('   TX Hash: ${result.txHash}');
+      stdout.writeln('   UID:     ${result.uid}');
+    }
     stdout.writeln('   Computed LP UID: $computedUid');
     stdout.writeln('');
     stdout.writeln('Copy this into your .env file:');

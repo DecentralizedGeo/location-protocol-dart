@@ -336,7 +336,7 @@ If `schemaRegistryAddress` is omitted, the address is resolved from `ChainConfig
 
 | Method | Parameters | Returns | Description |
 |---|---|---|---|
-| `register(SchemaDefinition schema)` | `schema: SchemaDefinition` | `Future<RegisterResult>` | Registers a schema on-chain and returns the transaction hash and UID |
+| `register(SchemaDefinition schema)` | `schema: SchemaDefinition` | `Future<RegisterResult>` | Checks if the schema already exists (via `getSchema`), then registers it if not. Returns immediately if already registered — no gas spent. See `RegisterResult.alreadyExisted` |
 | `getSchema(String uid)` | `uid: String` | `Future<SchemaRecord?>` | Fetches a schema record by UID. Returns `null` if not found |
 
 ---
@@ -558,14 +558,15 @@ Result of `EASClient.attest()` after the transaction is mined.
 
 ## RegisterResult
 
-Result of `SchemaRegistryClient.register()` after the transaction is broadcast.
+Result of `SchemaRegistryClient.register()` after the call completes.
 
 **Properties**
 
 | Property | Type | Description |
 |---|---|---|
-| `txHash` | `String` | Transaction hash (`0x`-prefixed, 66 chars) |
+| `txHash` | `String?` | Transaction hash (`0x`-prefixed, 66 chars), or `null` if the schema already existed and no transaction was sent |
 | `uid` | `String` | Deterministic schema UID (`0x`-prefixed, 66 chars), computed locally |
+| `alreadyExisted` | `bool` (getter) | `true` when `register()` found the schema already on-chain and skipped the transaction. Equivalent to `txHash == null` |
 
 ---
 
