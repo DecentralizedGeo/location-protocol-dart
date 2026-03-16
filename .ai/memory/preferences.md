@@ -17,6 +17,7 @@
 - Use barrel exports (`lib/location_protocol.dart`) to manage public API surface.
 - Keep internal implementation in `lib/src/`.
 - **Env Config**: Prefers `.env` + `.env.example` file pattern (inspired by [Astral SDK](https://github.com/DecentralizedGeo/astral-sdk/blob/main/.env.example)) over bash-exported environment variables for test secrets.
+- **Docs as executable contract**: Prefers Dart documentation snippets to be continuously validated via the `docs_snippet_extractor.dart` workflow (`auto-detect` step sequences, regenerate derived tests, then run `doc-snippets` tag checks).
 
 ### Knowledge Architect Role
 - **Goal**: Maintain the Agent Memory to ensure technical continuity and prevent "Project Reset."

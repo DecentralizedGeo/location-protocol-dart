@@ -73,3 +73,10 @@
 - **Error surface**: Built-in validator failures are normalized to `ArgumentError` at constructor-time boundaries.
 - **Registration rules**: Built-ins cannot be overridden; custom type registration is supported with duplicate custom registrations replacing prior custom validators.
 - **Migration safety**: `LPPayload(validateLocation: false)` bypasses type dispatch only; semver, URI, and null checks still run.
+
+### Phase 7 Documentation Snippet Validation Semantics
+- **Extractor contract**: `scripts/docs_snippet_extractor.dart` scans `README.md` and `docs/guides/*.md` for fenced `dart` blocks and generates `test/docs/docs_snippets_test.dart` as a derived artifact.
+- **Auto-detect step sequences**: Tutorial steps are inferred from heading patterns like `## Step 1`, `## Step 2`, etc., then reconstructed as accumulated tests where Step N includes Step 1..N code.
+- **Classification model**: Snippets are categorized into step-sequence, standalone, and error examples; error snippets are wrapped with `expect(throwsA(isA<ArgumentError>()))`.
+- **Cross-doc behavior**: Onchain guide snippets inject tutorial prerequisites (`schema`, `lpPayload`) and adapt env usage through `loadDotEnv()` with `sepolia` tagging.
+- **Parsing boundaries**: Blockquote code fences (`> ```dart`) are intentionally excluded from extraction.

@@ -48,6 +48,25 @@ dart test --reporter expanded
 
 > Tests tagged `sepolia` skip automatically when `SEPOLIA_RPC_URL` and `SEPOLIA_PRIVATE_KEY` are not set — they will not fail.
 
+### Documentation snippet validation
+
+When changing Dart examples in `README.md` or `docs/guides/*.md`, regenerate and validate doc snippet tests:
+
+```bash
+# Regenerate derived test file from docs
+dart run scripts/docs_snippet_extractor.dart
+
+# Offline validation (recommended in CI/local by default)
+dart test --tags doc-snippets --exclude-tags sepolia
+
+# Full doc snippet run (requires Sepolia env)
+dart test --tags doc-snippets
+```
+
+Notes:
+- `test/docs/docs_snippets_test.dart` is generated output; do not edit it manually.
+- Step-based tutorials are auto-detected from headings like `## Step 1`, `## Step 2`, etc.
+
 ---
 
 ## Code style
