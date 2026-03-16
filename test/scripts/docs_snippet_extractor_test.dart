@@ -166,4 +166,213 @@ LocationValidator.register('address', (value) => value != null);
       expect(custom.requiresTearDown, isTrue);
     });
   });
+
+  group('code helpers', () {
+    test('extractMainBody returns body for void and Future<void> main', () {
+      final voidMain = '''
+import 'package:location_protocol/location_protocol.dart';
+
+void main() async {
+  final value = 1;
+  print(value);
+}
+''';
+      final futureMain = '''
+Future<void> main() async {
+  final value = 2;
+  print(value);
+}
+''';
+
+      expect(extractMainBody(voidMain), contains('final value = 1;'));
+      expect(extractMainBody(voidMain), isNot(contains('void main')));
+      expect(extractMainBody(futureMain), contains('final value = 2;'));
+      expect(extractMainBody(futureMain), isNot(contains('Future<void> main')));
+    });
+
+    test('stripImports removes import lines', () {
+      final code = '''
+import 'dart:io';
+import 'package:test/test.dart';
+
+void main() {
+  print('x');
+}
+''';
+
+      final stripped = stripImports(code);
+      expect(stripped, isNot(contains("import 'dart:io';")));
+      expect(stripped, contains('void main()'));
+    });
+
+    test('substitutePlaceholderKeys replaces both quote styles', () {
+      final code = "'YOUR_PRIVATE_KEY_HEX' and \"YOUR_PRIVATE_KEY_HEX\"";
+
+      final substituted = substitutePlaceholderKeys(code);
+
+      expect(substituted, isNot(contains('YOUR_PRIVATE_KEY_HEX')));
+      expect(substituted, contains('ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'));
+    });
+
+    test('stripTrailingCommentBlock removes trailing comment-only section', () {
+      final code = '''
+final x = 1;
+
+// Optional section
+// More comments
+''';
+
+      final stripped = stripTrailingCommentBlock(code);
+      expect(stripped.trimRight(), 'final x = 1;');
+    });
+
+    test('indent prefixes non-empty lines with spaces', () {
+      final code = 'a\n\nb';
+      final indented = indent(code, 4);
+
+      expect(indented.split('\n')[0], '    a');
+      expect(indented.split('\n')[1], '');
+      expect(indented.split('\n')[2], '    b');
+    });
+  });
+
+  group('test file generation', () {
+    test('generateFileHeader contains doc-snippets tags and imports', () {
+      final header = generateFileHeader();
+
+      expect(header, contains("@Tags(['doc-snippets'])"));
+      expect(header, contains("import 'package:test/test.dart';"));
+      expect(header, contains("import 'package:location_protocol/location_protocol.dart';"));
+      expect(header, contains("import '../test_helpers/dotenv_loader.dart';"));
+    });
+
+    test('generateStandaloneTest wraps complete main snippet as async test', () {
+      final snippet = ExtractedSnippet(
+        sourceFile: 'README.md',
+        lineNumber: 81,
+        heading: 'Quick Start',
+        code: '''
+void main() async {
+  const privateKeyHex = 'YOUR_PRIVATE_KEY_HEX';
+  print(privateKeyHex);
+}
+''',
+      );
+
+      final generated = generateStandaloneTest(snippet);
+
+      expect(generated, contains("test('Quick Start (L81)', () async {"));
+      expect(generated, contains('ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'));
+      expect(generated, isNot(contains('void main')));
+    });
+
+    test('generateStepSequenceTests accumulates prior steps in each test body', () {
+      final group = SnippetGroup(
+        sourceFile: 'docs/guides/tutorial-first-attestation.md',
+        groupName: 'tutorial-first-attestation',
+        snippets: [
+          ExtractedSnippet(
+            sourceFile: 'docs/guides/tutorial-first-attestation.md',
+            lineNumber: 46,
+            heading: 'Step 1 — Define your schema',
+            code: '''
+void main() async {
+  final schema = SchemaDefinition(fields: []);
+}
+''',
+          ),
+          ExtractedSnippet(
+            sourceFile: 'docs/guides/tutorial-first-attestation.md',
+            lineNumber: 80,
+            heading: 'Step 2 — Create an LP payload',
+            code: "final lpPayload = LPPayload(lpVersion: '1.0.0', srs: 'x', locationType: 'address', location: 'y');",
+          ),
+        ],
+        stepSequence: [
+          ExtractedSnippet(
+            sourceFile: 'docs/guides/tutorial-first-attestation.md',
+            lineNumber: 46,
+            heading: 'Step 1 — Define your schema',
+            code: '''
+void main() async {
+  final schema = SchemaDefinition(fields: []);
+}
+''',
+          ),
+          ExtractedSnippet(
+            sourceFile: 'docs/guides/tutorial-first-attestation.md',
+            lineNumber: 80,
+            heading: 'Step 2 — Create an LP payload',
+            code: "final lpPayload = LPPayload(lpVersion: '1.0.0', srs: 'x', locationType: 'address', location: 'y');",
+          ),
+        ],
+        standaloneSnippets: const [],
+        errorExamples: const [],
+        requiresRpc: false,
+        requiresTearDown: false,
+      );
+
+      final generated = generateStepSequenceTests(group);
+
+      expect(generated, contains("group('Step sequence'"));
+      expect(generated, contains("test('Step 1 — Define your schema (L46)'"));
+      expect(generated, contains("test('Step 2 — Create an LP payload (L80)'"));
+      expect(generated, contains('final schema = SchemaDefinition(fields: []);'));
+      expect(generated, contains('final lpPayload = LPPayload'));
+    });
+
+    test('generateErrorExampleTests wraps snippets with ArgumentError expectation', () {
+      final snippets = [
+        ExtractedSnippet(
+          sourceFile: 'docs/guides/how-to-add-custom-location-type.md',
+          lineNumber: 43,
+          heading: 'Constraints — built-in override throws',
+          code: '''
+// Throws: ArgumentError
+LocationValidator.register('address', (value) => value != null);
+''',
+        ),
+      ];
+
+      final generated = generateErrorExampleTests(snippets);
+
+      expect(generated, contains("test('Constraints — built-in override throws (L43)'"));
+      expect(generated, contains('throwsA(isA<ArgumentError>())'));
+      expect(generated, isNot(contains('// Throws:')));
+    });
+
+    test('generateTestFile assembles groups with teardown and tags', () {
+      final group = SnippetGroup(
+        sourceFile: 'docs/guides/how-to-add-custom-location-type.md',
+        groupName: 'how-to-add-custom-location-type',
+        snippets: [
+          ExtractedSnippet(
+            sourceFile: 'docs/guides/how-to-add-custom-location-type.md',
+            lineNumber: 12,
+            heading: 'Step 1 — Register a custom validator',
+            code: "LocationValidator.register('plus-code', (value) => value != null);",
+          ),
+        ],
+        stepSequence: [
+          ExtractedSnippet(
+            sourceFile: 'docs/guides/how-to-add-custom-location-type.md',
+            lineNumber: 12,
+            heading: 'Step 1 — Register a custom validator',
+            code: "LocationValidator.register('plus-code', (value) => value != null);",
+          ),
+        ],
+        standaloneSnippets: const [],
+        errorExamples: const [],
+        requiresRpc: false,
+        requiresTearDown: true,
+      );
+
+      final generated = generateTestFile([group]);
+
+      expect(generated, contains("@Tags(['doc-snippets'])"));
+      expect(generated, contains("group('how-to-add-custom-location-type', () {"));
+      expect(generated, contains('tearDown(() => LocationValidator.resetCustomTypes());'));
+      expect(generated, contains("group('Step sequence'"));
+    });
+  });
 }
