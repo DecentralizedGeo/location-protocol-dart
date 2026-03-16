@@ -58,17 +58,27 @@ class SchemaRegistryClient {
 
   /// Registers a schema on-chain.
   ///
-  /// Sends a transaction to `SchemaRegistry.register()` and returns a
-  /// [RegisterResult] with the transaction hash and deterministic schema UID.
+  /// Before broadcasting a transaction, performs a read-only [getSchema] call
+  /// to check whether the schema is already registered. If it is, returns
+  /// immediately with [RegisterResult.alreadyExisted] equal to `true` and
+  /// [RegisterResult.txHash] equal to `null` — no gas is spent.
+  ///
+  /// If the schema is new, sends a transaction to `SchemaRegistry.register()`
+  /// and returns a [RegisterResult] with the transaction hash and the
+  /// deterministic schema UID.
   ///
   /// Requires an RPC connection and a funded wallet.
   Future<RegisterResult> register(SchemaDefinition schema) async {
+    final uid = SchemaUID.compute(schema);
+    final existing = await getSchema(uid);
+    if (existing != null) {
+      return RegisterResult(txHash: null, uid: uid);
+    }
     final callData = buildRegisterCallData(schema);
     final txHash = await provider.sendTransaction(
       to: contractAddress,
       data: callData,
     );
-    final uid = SchemaUID.compute(schema);
     return RegisterResult(txHash: txHash, uid: uid);
   }
 
