@@ -74,3 +74,35 @@ The recurring Sepolia suite validates that the configured UID has `0x` prefix an
 - Keeps recurring integration deterministic.
 - Avoids creating per-run schemas and duplicate onchain writes.
 - Ensures onchain verification focuses on schema existence/non-existence and attest→fetch parity against the fixed UID.
+
+## Phase 6: Location Type Validation
+
+`LPPayload` now validates that `location` structurally matches declared `locationType` during construction.
+
+### Supported built-in location types
+
+- `coordinate-decimal+lon-lat` → `List<num>` with exactly 2 elements `[lon, lat]` and bounds lon ∈ [-180, 180], lat ∈ [-90, 90]
+- `geojson-point` / `geojson-line` / `geojson-polygon` → `Map` parsed as GeoJSON geometry
+- `h3` → `String` matching `^[89ab][0-9a-f]{14}$`
+- `geohash` → `String` matching `^[0-9b-hjkmnp-z]{1,12}$`
+- `wkt` → `String` that parses as WKT geometry
+- `address` → non-empty trimmed `String`
+- `scaledCoordinates` → `Map` containing numeric `x`, `y`, `scale`
+
+### Custom validators
+
+You can register custom non-built-in location types:
+
+```dart
+LocationValidator.register('community.plus-code.v1', (location) {
+	if (location is! String || location.trim().isEmpty) {
+		throw ArgumentError('plus-code must be a non-empty String');
+	}
+});
+```
+
+Built-ins cannot be overridden. Duplicate custom registrations replace prior custom validators.
+
+### Migration bypass
+
+`LPPayload(validateLocation: false)` bypasses only location type dispatch while keeping semver, URI, and null checks active.
