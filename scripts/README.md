@@ -5,9 +5,7 @@
   - [Table of Contents](#table-of-contents)
   - [Purpose](#purpose)
   - [`sepolia_schema_bootstrap.dart`](#sepolia_schema_bootstrapdart)
-  - [Run](#run)
   - [`docs_snippet_extractor.dart`](#docs_snippet_extractordart)
-    - [Run](#run-1)
     - [Test the generated file](#test-the-generated-file)
 
 ## Purpose
@@ -22,7 +20,7 @@ Registers the LP-only schema on Sepolia once and prints a copy/paste line for `.
 
 Use it when setting up a new test environment or replacing the fixed schema UID.
 
-## Run
+**How to run script**
 
 ```bash
 dart run scripts/sepolia_schema_bootstrap.dart
@@ -54,7 +52,7 @@ Extracts all `````dart`` code blocks from `README.md` and `docs/guides/*.md`, th
 - Wraps error-demonstrating snippets in `expect(throwsA(...))` assertions
 - Tags RPC-dependent tests with `sepolia` for conditional execution
 
-### Run
+**How to run script**
 
 ```bash
 dart run scripts/docs_snippet_extractor.dart
