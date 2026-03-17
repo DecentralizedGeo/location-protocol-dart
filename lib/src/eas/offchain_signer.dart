@@ -249,8 +249,99 @@ class OffchainSigner {
     required String refUID,
     required Uint8List data,
     required Uint8List salt,
+  }) =>
+      computeOffchainUID(
+        schemaUID: schemaUID,
+        recipient: recipient,
+        time: time,
+        expirationTime: expirationTime,
+        revocable: revocable,
+        refUID: refUID,
+        data: data,
+        salt: salt,
+      );
+
+  // ---------------------------------------------------------------------------
+  // Public static utilities
+  // ---------------------------------------------------------------------------
+
+  /// Builds a JSON-safe EIP-712 typed data map for an EAS offchain attestation.
+  ///
+  /// The returned map conforms to the EIP-712 JSON structure:
+  /// `{ types, primaryType, domain, message }`. All integer values are
+  /// **decimal strings** (e.g. `'11155111'`), and all byte values are
+  /// `0x`-prefixed hex strings — both required by wallet SDKs and by
+  /// `Eip712TypedData.fromJson()` in `on_chain` v8 (which calls
+  /// `valueAsBigInt(allowHex: false)` for `uint*` types).
+  static Map<String, dynamic> buildOffchainTypedDataJson({
+    required int chainId,
+    required String easContractAddress,
+    required String schemaUID,
+    required String recipient,
+    required BigInt time,
+    required BigInt expirationTime,
+    required bool revocable,
+    required String refUID,
+    required Uint8List data,
+    required Uint8List salt,
+    String easVersion = '1.0.0',
   }) {
-    // solidityPackedKeccak256 matching EAS specification
+    return {
+      'types': {
+        'EIP712Domain': [
+          {'name': 'name', 'type': 'string'},
+          {'name': 'version', 'type': 'string'},
+          {'name': 'chainId', 'type': 'uint256'},
+          {'name': 'verifyingContract', 'type': 'address'},
+        ],
+        'Attest': [
+          {'name': 'version', 'type': 'uint16'},
+          {'name': 'schema', 'type': 'bytes32'},
+          {'name': 'recipient', 'type': 'address'},
+          {'name': 'time', 'type': 'uint64'},
+          {'name': 'expirationTime', 'type': 'uint64'},
+          {'name': 'revocable', 'type': 'bool'},
+          {'name': 'refUID', 'type': 'bytes32'},
+          {'name': 'data', 'type': 'bytes'},
+          {'name': 'salt', 'type': 'bytes32'},
+        ],
+      },
+      'primaryType': 'Attest',
+      'domain': {
+        'name': 'EAS Attestation',
+        'version': easVersion,
+        'chainId': chainId.toString(), // decimal string — on_chain allowHex: false
+        'verifyingContract': easContractAddress,
+      },
+      'message': {
+        // integers → decimal strings (on_chain v8 valueAsBigInt(allowHex: false))
+        'version': EASConstants.attestationVersion.toString(),
+        'schema': schemaUID, // hex bytes32
+        'recipient': recipient, // address
+        'time': time.toString(), // decimal string
+        'expirationTime': expirationTime.toString(), // decimal string
+        'revocable': revocable, // bool as-is
+        'refUID': refUID, // hex bytes32
+        'data': '0x${BytesUtils.toHexString(data)}', // hex bytes
+        'salt': '0x${BytesUtils.toHexString(salt).padLeft(64, '0')}', // hex bytes32
+      },
+    };
+  }
+
+  /// Computes the deterministic offchain attestation UID (v2).
+  ///
+  /// The UID is a keccak256 hash of the tightly-packed attestation fields as
+  /// defined by the EAS offchain v2 specification.
+  static String computeOffchainUID({
+    required String schemaUID,
+    required String recipient,
+    required BigInt time,
+    required BigInt expirationTime,
+    required bool revocable,
+    required String refUID,
+    required Uint8List data,
+    required Uint8List salt,
+  }) {
     final List<int> packed = [];
 
     // 1. version (uint16)
