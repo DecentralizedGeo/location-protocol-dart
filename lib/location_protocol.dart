@@ -19,6 +19,8 @@ export 'src/eas/abi_encoder.dart';
 export 'src/eas/offchain_signer.dart';
 export 'src/eas/onchain_client.dart';
 export 'src/eas/schema_registry.dart';
+export 'src/eas/signer.dart';
+export 'src/eas/local_key_signer.dart';
 
 // Config
 export 'src/config/chain_config.dart';
