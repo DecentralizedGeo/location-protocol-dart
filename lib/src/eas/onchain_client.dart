@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:blockchain_utils/blockchain_utils.dart';
+
 import '../lp/lp_payload.dart';
 import '../schema/schema_definition.dart';
 import '../config/chain_config.dart';
@@ -93,6 +95,31 @@ class EASClient {
     ]);
 
     return Uint8List.fromList(encoded);
+  }
+
+  /// Build a wallet-friendly transaction request for `EAS.attest()`.
+  ///
+  /// Does NOT send or sign the transaction. Packages the ABI-encoded
+  /// [callData] into a standard Ethereum transaction map that can be
+  /// serialized and passed to an external wallet for `eth_sendTransaction`.
+  ///
+  /// The returned map contains:
+  /// - `to`: the EAS contract address
+  /// - `data`: `0x`-prefixed hex of [callData]
+  /// - `value`: `'0x0'` by default, or [value] as hex
+  /// - `from`: the sender address (only included if [from] is provided)
+  static Map<String, dynamic> buildAttestTxRequest({
+    required String easAddress,
+    required Uint8List callData,
+    String? from,
+    BigInt? value,
+  }) {
+    return {
+      if (from != null) 'from': from,
+      'to': easAddress,
+      'data': '0x${BytesUtils.toHexString(callData)}',
+      'value': value != null ? '0x${value.toRadixString(16)}' : '0x0',
+    };
   }
 
   /// Submit an onchain attestation.

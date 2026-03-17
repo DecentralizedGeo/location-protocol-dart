@@ -155,5 +155,100 @@ void main() {
         throwsA(isNot(isA<UnimplementedError>())),
       );
     });
+
+    // -------------------------------------------------------------------------
+    // Task 7: buildAttestTxRequest
+    // -------------------------------------------------------------------------
+
+    group('buildAttestTxRequest', () {
+      final schema = SchemaDefinition(
+        fields: [SchemaField(type: 'uint256', name: 'timestamp')],
+      );
+      final lpPayload = LPPayload(
+        lpVersion: '1.0.0',
+        srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+        locationType: 'address',
+        location: 'test-location',
+      );
+      const easAddress = '0xC2679fBD37d54388Ce493F1DB75320D236e1815e';
+
+      test('builds correct transaction request map (no from, no value)', () {
+        final callData = EASClient.buildAttestCallData(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {'timestamp': BigInt.from(1710000000)},
+        );
+
+        final tx = EASClient.buildAttestTxRequest(
+          easAddress: easAddress,
+          callData: callData,
+        );
+
+        expect(tx['to'], equals(easAddress));
+        expect(tx['data'], startsWith('0x'));
+        expect(tx['value'], equals('0x0'));
+        expect(tx.containsKey('from'), isFalse);
+      });
+
+      test('includes from key when provided', () {
+        final callData = EASClient.buildAttestCallData(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {'timestamp': BigInt.from(1710000000)},
+        );
+
+        const fromAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+        final tx = EASClient.buildAttestTxRequest(
+          easAddress: easAddress,
+          callData: callData,
+          from: fromAddress,
+        );
+
+        expect(tx['from'], equals(fromAddress));
+        expect(tx['to'], equals(easAddress));
+      });
+
+      test('custom value renders as hex string', () {
+        final callData = EASClient.buildAttestCallData(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {'timestamp': BigInt.from(1710000000)},
+        );
+
+        final tx = EASClient.buildAttestTxRequest(
+          easAddress: easAddress,
+          callData: callData,
+          value: BigInt.from(1000000000000000000), // 1 ETH
+        );
+
+        expect(tx['value'], equals('0xde0b6b3a7640000'));
+      });
+
+      test('data hex matches buildAttestCallData output', () {
+        final callData = EASClient.buildAttestCallData(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {'timestamp': BigInt.from(1710000000)},
+        );
+
+        final tx = EASClient.buildAttestTxRequest(
+          easAddress: easAddress,
+          callData: callData,
+        );
+
+        final dataHex = tx['data'] as String;
+        expect(dataHex, startsWith('0x'));
+
+        // First 4 bytes (8 hex chars + 0x prefix) are the function selector
+        expect(dataHex.length, greaterThan(10));
+
+        // Decoded bytes match original callData
+        final decoded = List<int>.generate(
+          (dataHex.length - 2) ~/ 2,
+          (i) => int.parse(dataHex.substring(2 + i * 2, 4 + i * 2), radix: 16),
+        );
+        expect(decoded, equals(callData));
+      });
+    });
   });
 }
