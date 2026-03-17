@@ -67,3 +67,13 @@
 - **Runtime-safe snippet adaptation**: If docs include harness-only APIs like `tearDown(...)` in snippet prose, transform to runtime-safe equivalents when generating executable tests.
 - **Network flake policy for generated docs**: For Sepolia-tagged generated tests, use explicit env skip guards and handle mempool duplicate transaction errors (`already known`) by marking tests skipped rather than failing unrelated documentation validation.
 - **Idempotency gate**: Run generator twice and compare file hashes to ensure deterministic output before phase closeout.
+
+### Phase 8 Signer Interface Patterns
+- **JSON typed data map constraint**: `buildOffchainTypedDataJson` MUST use decimal strings for all `uint*` values (e.g. `'11155111'`, `'2'`, `'0'`). Using `BigInt` or hex strings causes `on_chain` v8 `_ensureCorrectValues` to throw because it calls `valueAsBigInt(allowHex: false)` for numeric EIP-712 types.
+- **Signature byte layout**: `EIP712Signature.fromHex` expects 65-byte layout `r[32] || s[32] || v[1]` — this matches what `eth_signTypedData_v4` wallets return. Do NOT confuse with `v || r || s` alternative.
+- **v normalization is mandatory**: Some wallets (e.g. Ledger, some Privy integrations) return `v=0` or `v=1`. Always apply `if (v < 27) v += 27` before storing or verifying. `_LowVSignerWrapper` test helper validates this.
+- **Wallet adapter override pattern**: Wallet-backed `Signer` implementations should override `signTypedData` (not `signDigest`) and call `eth_signTypedData_v4` directly, then parse the result with `EIP712Signature.fromHex`. Throwing `UnsupportedError` in `signDigest` is idiomatic.
+- **Parity verification gate**: When exposing JSON-safe typed data (for wallet path), always add a test that compares `Eip712TypedData.fromJson(jsonMap).encode()` with `nativeTypedData.encode()` to confirm byte-identical digests before merging.
+- **`fromPrivateKey` backward compat**: The primary constructor now takes `Signer`; all old call sites using `OffchainSigner(privateKeyHex:)` must be updated to `OffchainSigner.fromPrivateKey(privateKeyHex:)`.
+- **`buildAttestTxRequest` value encoding**: Always encode the ETH value as a `0x`-prefixed hex string (`BigInt.toRadixString(16)`), not decimal. Default is `'0x0'`.
+- **`from` key conditional inclusion**: In `buildAttestTxRequest`, include `from` ONLY if provided using Dart's conditional map entry syntax (`if (from != null) 'from': from`). Wallet SDKs that infer `from` from the connected wallet will fail if an explicit `null` string is passed.

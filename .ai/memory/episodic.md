@@ -133,3 +133,30 @@
 	- Added generation-time normalization for utility snippets that call `tearDown(...)` so they execute safely in runtime tests.
 	- Stabilized Sepolia doc-snippet execution by skip-guarding duplicate mempool transaction errors (`already known`) while preserving core snippet execution.
 - **Verification**: Offline doc-snippet suite passes, Sepolia doc-snippet suite passes in-session, full non-Sepolia suite passes, and generator output is idempotent across two consecutive runs.
+
+### [ID: PHASE8_SIGNER_INTERFACE_EXEC] -> Follows [PHASE7_DOC_SNIPPET_VALIDATION_EXEC]
+- **Date**: 2026-03-17
+- **Event**: Implementation of Phase 8 (Signer Interface Design)
+- **Status**: COMPLETED
+- **Context**: Introduced abstract `Signer` class to decouple `OffchainSigner` from raw private keys, enabling wallet-backed EIP-712 signing.
+- **Files Added**:
+  - `lib/src/eas/signer.dart` — abstract `Signer` with `address`, `signDigest`, and default `signTypedData` (JSON→Eip712TypedData→encode→signDigest)
+  - `lib/src/eas/local_key_signer.dart` — `LocalKeySigner` wrapping `ETHPrivateKey`  
+  - `test/eas/signer_test.dart` — 6 tests for Signer contract + LocalKeySigner (including real-crypto ecRecover)
+  - `test/models/signature_test.dart` — 7 tests for `EIP712Signature.fromHex()`
+- **Files Modified**:
+  - `lib/src/models/signature.dart` — added `EIP712Signature.fromHex()` factory (65-byte r||s||v layout, throws on wrong length)
+  - `lib/src/eas/offchain_signer.dart` — refactored to accept `Signer`; added `fromPrivateKey` factory; replaced `_buildTypedData` with `buildOffchainTypedDataJson` (public static, JSON-safe map); `_computeOffchainUID` now delegates to `computeOffchainUID` (public static); `signOffchainAttestation` now uses `signer.signTypedData(jsonMap)` + v normalization (0/1 → 27/28); `verifyOffchainAttestation` uses `fromJson→encode` path
+  - `lib/src/eas/onchain_client.dart` — added `buildAttestTxRequest({easAddress, callData, from?, value?})` static helper
+  - `lib/location_protocol.dart` — added `signer.dart` and `local_key_signer.dart` exports
+  - `test/eas/offchain_signer_test.dart` — updated setUp to `fromPrivateKey`; added Task 4 utility group (6 tests), Task 5 fromPrivateKey/parity/v-norm groups (3 tests), `_LowVSignerWrapper` helper
+  - `test/integration/full_workflow_test.dart` — updated to `fromPrivateKey`; added Task 6 wallet-style signer integration test with `_WalletStyleSigner`
+  - `test/eas/onchain_client_test.dart` — added Task 7 buildAttestTxRequest group (4 tests)
+- **Key Design Constraints**:
+  - `buildOffchainTypedDataJson`: uint values MUST be decimal strings (e.g. `'11155111'`), NOT hex — `on_chain` v8 calls `valueAsBigInt(allowHex: false)` for `uint*` types
+  - `EIP712Signature.fromHex`: 65-byte layout is `r[32] || s[32] || v[1]` (NOT `v || r || s`)
+  - v normalization: `if (v < 27) v += 27` (some wallets return 0/1)
+  - `signTypedData` default impl: `Eip712TypedData.fromJson(map).encode()` → 32-byte digest → `signDigest`
+  - `buildAttestTxRequest` value: always hex string (e.g. `'0x0'` for zero)
+- **Verification**: 93/93 unit tests pass across all test directories (no regressions)
+- **Commits**: 5 clean commits on `main` — `feat: add EIP712Signature.fromHex()`, `feat: add Signer abstract class and LocalKeySigner implementation`, `feat: expose buildOffchainTypedDataJson and computeOffchainUID as public utilities`, `feat: refactor OffchainSigner to accept Signer, add fromPrivateKey factory`, `feat: add EASClient.buildAttestTxRequest() wallet-friendly tx helper`, `feat: update barrel exports to include Signer and LocalKeySigner`

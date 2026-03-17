@@ -80,3 +80,14 @@
 - **Classification model**: Snippets are categorized into step-sequence, standalone, and error examples; error snippets are wrapped with `expect(throwsA(isA<ArgumentError>()))`.
 - **Cross-doc behavior**: Onchain guide snippets inject tutorial prerequisites (`schema`, `lpPayload`) and adapt env usage through `loadDotEnv()` with `sepolia` tagging.
 - **Parsing boundaries**: Blockquote code fences (`> ```dart`) are intentionally excluded from extraction.
+
+### Phase 8 Signer Interface Semantics
+- **`Signer` abstract class** (`lib/src/eas/signer.dart`): The central abstraction. `address` (getter), `signDigest(Uint8List)` (abstract), `signTypedData(Map<String,dynamic>)` (concrete default using `Eip712TypedData.fromJson`).
+- **`LocalKeySigner`** (`lib/src/eas/local_key_signer.dart`): Implements `Signer` by wrapping `ETHPrivateKey`. Inherits default `signTypedData`. Used for local key / server-side signing.
+- **`EIP712Signature.fromHex`**: Parses 65-byte `r[32]||s[32]||v[1]` wallet response into `EIP712Signature(v,r,s)`. Throws `ArgumentError` for wrong length.
+- **`OffchainSigner` refactored API**:
+  - Primary ctor: `OffchainSigner({required Signer signer, required int chainId, required String easContractAddress, ...})`
+  - Factory: `OffchainSigner.fromPrivateKey({required String privateKeyHex, required int chainId, required String easContractAddress, ...})` — backward compat
+  - Public statics: `buildOffchainTypedDataJson(...)` (JSON-safe map with decimal string uints), `computeOffchainUID(...)` (keccak256 of packed fields)
+- **`EASClient.buildAttestTxRequest`**: Static helper wrapping ABI-encoded calldata into `{to, data, value, from?}` transaction map for `eth_sendTransaction`.
+- **Wallet adapter pattern**: Subclass `Signer`, override `signTypedData` to call `eth_signTypedData_v4`, parse result via `EIP712Signature.fromHex`, throw `UnsupportedError` in `signDigest`.
