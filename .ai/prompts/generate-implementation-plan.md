@@ -13,18 +13,17 @@ You are a **Senior Software Engineer** who prioritizes **systematic precision ov
 
 **Target Phase**: [PHASE_NUMBER: PHASE_NAME]  
 **Objective**: [WHAT_ARE_WE_DESIGNING_NOW]  
-**PRD Reference**: `docs/plans/[OBJECTIVE_NAME]_prd.md` (if available)
+**PRD Reference**: `docs/plans/[PRD].md` (if available)
 
 ---
 
 ### Objective
-Generate an in-depth specification and implementation plan for **[PHASE_NAME]** using the `writing-plans` skill. The output must reside in: `docs/spec/plans/YYYY-MM-DD_[PHASE_NUMBER]-[PHASE_NAME].md`.
-
+Generate an in-depth specification and implementation plan for **[PHASE_NAME]** sing the `writing-plans` skill. The output must reside in `./docs/spec/plans/` with the naming convention `YYYY-MM-DD_[PHASE_NUMBER]-[PHASE_NAME].md`.
 ---
 
 ### Step 1: Contextual Research & Continuity
 Before designing the new phase, you must synchronize with the existing system:
-1.  **Project Requirements Alignment**: Review the [PRD](./docs/plans/[OBJECTIVE_NAME]_prd.md) to understand dependencies and success criteria for this specific phase.
+1.  **Project Requirements Alignment**: Review the [PRD](./docs/plans/[PRD].md) to understand dependencies and success criteria for this specific phase.
 2.  **Codebase Audit**: Examine existing code in `lib/` and `test/` to ensure the new design fits the established patterns and utilizes existing utilities.
 3.  **Memory Recall**: Read `.ai/memory/` to retrieve past architectural decisions and patterns (e.g., Error Handling tiers).
 
@@ -63,5 +62,5 @@ The plan must conclude with a verification phase including:
 ---
 
 ### Initialization Instructions for the Agent:
-1.  Review `AGENTS.md` and `writing-plans` skill.
+1.  Review `AGENTS.md`.
 2.  **Acknowledge**: Respond with "Agent Memory synchronized. Ready to design [PHASE_NAME]."
