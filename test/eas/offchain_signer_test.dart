@@ -6,7 +6,10 @@ import 'package:location_protocol/src/lp/lp_payload.dart';
 import 'package:location_protocol/src/schema/schema_field.dart';
 import 'package:location_protocol/src/schema/schema_definition.dart';
 import 'package:location_protocol/src/eas/offchain_signer.dart';
+import 'package:location_protocol/src/eas/local_key_signer.dart';
+import 'package:location_protocol/src/eas/signer.dart';
 import 'package:location_protocol/src/eas/constants.dart';
+import 'package:location_protocol/src/models/signature.dart';
 
 void main() {
   // A well-known test private key — NEVER use in production
@@ -19,11 +22,10 @@ void main() {
   late LPPayload lpPayload;
 
   setUp(() {
-    signer = OffchainSigner(
+    signer = OffchainSigner.fromPrivateKey(
       privateKeyHex: testPrivateKeyHex,
       chainId: 11155111, // Sepolia
       easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
-      easVersion: '1.0.0',
     );
 
     schema = SchemaDefinition(
@@ -347,4 +349,111 @@ void main() {
       expect(computedUID, equals(signed.uid));
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Task 5: OffchainSigner constructor refactor + fromPrivateKey factory
+  // ---------------------------------------------------------------------------
+
+  // Helper: a Signer that returns v in 0/1 range to test normalization
+  late LocalKeySigner _realLocalKey;
+  late _LowVSignerWrapper _lowVSigner;
+
+  group('fromPrivateKey factory', () {
+    test('constructs OffchainSigner with correct signerAddress', () {
+      final s = OffchainSigner.fromPrivateKey(
+        privateKeyHex: testPrivateKeyHex,
+        chainId: 11155111,
+        easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+      );
+      expect(
+        s.signerAddress.toLowerCase(),
+        equals('0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266'),
+      );
+    });
+
+    test('primary constructor + fromPrivateKey produce identical attestations', () async {
+      final detSalt = Uint8List(32)..[0] = 0x42;
+      final detTime = BigInt.from(1710000001);
+
+      // via fromPrivateKey
+      final signerA = OffchainSigner.fromPrivateKey(
+        privateKeyHex: testPrivateKeyHex,
+        chainId: 11155111,
+        easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+      );
+
+      // via primary constructor w/ LocalKeySigner
+      final signerB = OffchainSigner(
+        signer: LocalKeySigner(privateKeyHex: testPrivateKeyHex),
+        chainId: 11155111,
+        easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+      );
+
+      final signedA = await signerA.signOffchainAttestation(
+        schema: schema,
+        lpPayload: lpPayload,
+        userData: {'timestamp': BigInt.from(1710000000), 'memo': 'parity'},
+        time: detTime,
+        salt: detSalt,
+      );
+
+      final signedB = await signerB.signOffchainAttestation(
+        schema: schema,
+        lpPayload: lpPayload,
+        userData: {'timestamp': BigInt.from(1710000000), 'memo': 'parity'},
+        time: detTime,
+        salt: detSalt,
+      );
+
+      expect(signedA.uid, equals(signedB.uid));
+      expect(signedA.signature.v, equals(signedB.signature.v));
+      expect(signedA.signature.r, equals(signedB.signature.r));
+      expect(signedA.signature.s, equals(signedB.signature.s));
+    });
+  });
+
+  group('v normalization', () {
+    test('normalizes v from 0/1 range to 27/28', () async {
+      const keyHex = 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+      final lowVSigner = _LowVSignerWrapper(privateKeyHex: keyHex);
+
+      final offchainSigner = OffchainSigner(
+        signer: lowVSigner,
+        chainId: 11155111,
+        easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+      );
+
+      final signed = await offchainSigner.signOffchainAttestation(
+        schema: schema,
+        lpPayload: lpPayload,
+        userData: {'timestamp': BigInt.from(1710000000), 'memo': 'v-norm'},
+      );
+
+      // v MUST be 27 or 28 after normalization
+      expect(signed.signature.v, anyOf(equals(27), equals(28)));
+
+      // Attestation MUST still verify correctly
+      final result = offchainSigner.verifyOffchainAttestation(signed);
+      expect(result.isValid, isTrue);
+    });
+  });
+}
+
+/// A [Signer] wrapper that shifts v back to 0/1 range to test normalization.
+class _LowVSignerWrapper extends Signer {
+  final LocalKeySigner _inner;
+
+  _LowVSignerWrapper({required String privateKeyHex})
+      : _inner = LocalKeySigner(privateKeyHex: privateKeyHex);
+
+  @override
+  String get address => _inner.address;
+
+  @override
+  Future<EIP712Signature> signDigest(Uint8List digest) async {
+    final sig = await _inner.signDigest(digest);
+    // shift v from 27/28 down to 0/1 to simulate some wallet responses
+    final lowV = sig.v >= 27 ? sig.v - 27 : sig.v;
+    return EIP712Signature(v: lowV, r: sig.r, s: sig.s);
+  }
 }

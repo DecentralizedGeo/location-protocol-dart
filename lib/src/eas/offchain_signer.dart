@@ -14,29 +14,54 @@ import '../utils/hex_utils.dart';
 import 'abi_encoder.dart';
 import 'constants.dart';
 
+import 'signer.dart';
+import 'local_key_signer.dart';
+
 /// EIP-712 offchain attestation signer and verifier.
 ///
 /// Signs Location Protocol attestations using EIP-712 typed data (Version 2
 /// with salt). No RPC connection required.
+///
+/// Use [OffchainSigner.fromPrivateKey] for local key signing (backward
+/// compatible), or pass any [Signer] implementation for wallet-backed signing.
 class OffchainSigner {
-  final String _privateKeyHex;
+  final Signer signer;
   final int chainId;
   final String easContractAddress;
   final String easVersion;
 
-  /// Creates a signer with the given private key and chain configuration.
+  /// Creates a signer with the given [Signer] and chain configuration.
+  ///
+  /// For wallet-backed signing, pass a custom [Signer] implementation that
+  /// calls `eth_signTypedData_v4`. For local key signing, prefer
+  /// [OffchainSigner.fromPrivateKey].
   OffchainSigner({
-    required String privateKeyHex,
+    required this.signer,
     required this.chainId,
     required this.easContractAddress,
     this.easVersion = '1.0.0',
-  }) : _privateKeyHex = privateKeyHex;
+  });
 
-  /// The Ethereum address derived from the private key.
-  String get signerAddress {
-    final privateKey = ETHPrivateKey(_privateKeyHex);
-    return privateKey.publicKey().toAddress().address;
+  /// Convenience factory for local private key signing (backward compatible).
+  ///
+  /// Wraps [privateKeyHex] in a [LocalKeySigner] and delegates to the primary
+  /// constructor. This preserves backward compatibility with existing code.
+  factory OffchainSigner.fromPrivateKey({
+    required String privateKeyHex,
+    required int chainId,
+    required String easContractAddress,
+    String easVersion = '1.0.0',
+  }) {
+    return OffchainSigner(
+      signer: LocalKeySigner(privateKeyHex: privateKeyHex),
+      chainId: chainId,
+      easContractAddress: easContractAddress,
+      easVersion: easVersion,
+    );
   }
+
+  /// The Ethereum address derived from the signer.
+  String get signerAddress => signer.address;
 
   /// Signs an offchain attestation using EIP-712 typed data.
   Future<SignedOffchainAttestation> signOffchainAttestation({
@@ -66,8 +91,10 @@ class OffchainSigner {
     // 2. Compute schema UID
     final schemaUID = SchemaUID.compute(schema);
 
-    // 3. Build EIP-712 typed data
-    final typedData = _buildTypedData(
+    // 3. Build JSON-safe EIP-712 typed data map
+    final typedDataJson = buildOffchainTypedDataJson(
+      chainId: chainId,
+      easContractAddress: easContractAddress,
       schemaUID: schemaUID,
       recipient: recipient,
       time: now,
@@ -76,15 +103,17 @@ class OffchainSigner {
       refUID: ref,
       data: encodedData,
       salt: saltBytes,
+      easVersion: easVersion,
     );
 
-    // 4. Sign the typed data
-    final privateKey = ETHPrivateKey(_privateKeyHex);
-    final hash = typedData.encode();
-    final sig = privateKey.sign(hash, hashMessage: false);
+    // 4. Sign via the Signer interface (supports both local keys and wallets)
+    final rawSig = await signer.signTypedData(typedDataJson);
 
-    // 5. Compute offchain UID
-    final uid = _computeOffchainUID(
+    // 5. Normalize v to 27/28 (wallets may return 0/1)
+    final normalizedV = rawSig.v < 27 ? rawSig.v + 27 : rawSig.v;
+
+    // 6. Compute offchain UID
+    final uid = computeOffchainUID(
       schemaUID: schemaUID,
       recipient: recipient,
       time: now,
@@ -106,11 +135,7 @@ class OffchainSigner {
       data: encodedData,
       salt: saltHex,
       version: EASConstants.attestationVersion,
-      signature: EIP712Signature(
-        v: sig.v,
-        r: '0x${BytesUtils.toHexString(sig.rBytes).padLeft(64, "0")}',
-        s: '0x${BytesUtils.toHexString(sig.sBytes).padLeft(64, "0")}',
-      ),
+      signature: EIP712Signature(v: normalizedV, r: rawSig.r, s: rawSig.s),
       signer: signerAddress,
     );
   }
@@ -121,7 +146,7 @@ class OffchainSigner {
     final saltBytes = Uint8List.fromList(attestation.salt.toBytes());
 
     // 1. Verify UID
-    final expectedUID = _computeOffchainUID(
+    final expectedUID = computeOffchainUID(
       schemaUID: attestation.schemaUID,
       recipient: attestation.recipient,
       time: attestation.time,
@@ -140,8 +165,10 @@ class OffchainSigner {
       );
     }
 
-    // 2. Recover signer address
-    final typedData = _buildTypedData(
+    // 2. Recover signer address via JSON-safe typed data → digest → ecRecover
+    final typedDataJson = buildOffchainTypedDataJson(
+      chainId: chainId,
+      easContractAddress: easContractAddress,
       schemaUID: attestation.schemaUID,
       recipient: attestation.recipient,
       time: attestation.time,
@@ -150,9 +177,10 @@ class OffchainSigner {
       refUID: attestation.refUID,
       data: attestation.data,
       salt: saltBytes,
+      easVersion: easVersion,
     );
 
-    final hash = typedData.encode();
+    final hash = Eip712TypedData.fromJson(typedDataJson).encode();
     final r = BytesUtils.fromHexString(attestation.signature.r.substring(2));
     final s = BytesUtils.fromHexString(attestation.signature.s.substring(2));
     final v = attestation.signature.v;
