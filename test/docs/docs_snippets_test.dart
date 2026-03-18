@@ -446,9 +446,9 @@ void main() {
           final easAddress = ChainConfig.forChainId(chainId)!.eas;
           const myWalletAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
 
-          final txRequest = EASClient.buildAttestTxRequest(
-            easAddress: easAddress,
-            callData: callData,
+          final txRequest = TxUtils.buildTxRequest(
+            to: easAddress,
+            data: callData,
             from: myWalletAddress, // omit if your wallet SDK infers the sender
           );
 
@@ -488,9 +488,9 @@ void main() {
           final easAddress = ChainConfig.forChainId(chainId)!.eas;
           const myWalletAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
 
-          final txRequest = EASClient.buildAttestTxRequest(
-            easAddress: easAddress,
-            callData: callData,
+          final txRequest = TxUtils.buildTxRequest(
+            to: easAddress,
+            data: callData,
             from: myWalletAddress, // omit if your wallet SDK infers the sender
           );
 

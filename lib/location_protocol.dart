@@ -37,3 +37,6 @@ export 'src/models/register_result.dart';
 export 'src/rpc/rpc_provider.dart';
 export 'src/rpc/default_rpc_provider.dart';
 export 'src/rpc/transaction_receipt.dart';
+
+// Utils
+export 'src/utils/tx_utils.dart';
