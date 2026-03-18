@@ -39,9 +39,15 @@ RunValidator -->|Passes| Success
 
 ---
 
-## 2. EAS Schemas and Attestation UIDs
+## 2. The EAS Reference Envelope
 
-[EAS (Ethereum Attestation Service)](https://docs.attest.org/docs/core--concepts/how-eas-works) organises attestations around *schemas* — ABI-encoded struct definitions expressed as a comma-separated string of `type name` pairs, such as `"string name,uint256 age"`. Every schema string, combined with its resolver contract address and revocability flag, maps to a deterministic, globally unique identifier: the schema UID.
+[EAS (Ethereum Attestation Service)](https://docs.attest.org/docs/core--concepts/how-eas-works) serves as the **reference envelope** for anchoring and signing Location Protocol payloads in this library. 
+
+While the Location Protocol payload format itself is completely implementation-agnostic and chain-agnostic at the data layer, the signature and storage mechanisms provided by EAS are Ethereum- and EVM-specific (using secp256k1 keys, keccak256 hashing, and EIP-712 structured data).
+
+Because the payload data is independent of the EAS envelope, records you produce are natively compatible across Ethereum and other EVM networks that understand EAS. For non-EVM networks like Solana, Filecoin, or others, the LP payload remains entirely portable — you could wrap the same LP base fields in a Solana-native or Filecoin-native attestation service in the future, or treat the EAS records as external, Ethereum-verifiable artifacts referenced from those chains.
+
+When using EAS as the envelope, it organises attestations around *schemas*, ABI-encoded struct definitions expressed as a comma-separated string of `type name` pairs, such as `"string name,uint256 age"`, defined in a [resolver contract](https://docs.attest.org/docs/tutorials/resolver-contracts). Every schema string, combined with its resolver contract address and revocability flag, maps to a deterministic, globally unique identifier: the schema UID.
 
 The UID is computed as `keccak256(abi.encodePacked(schemaString, resolverAddress, revocable))`. Because the inputs are deterministic, the same schema registered on two different chains produces the same UID, and the same schema registered twice on the same chain produces the same UID. The library exposes this as `SchemaUID.compute(schema)`, which runs entirely in memory — no RPC call, no network round-trip.
 

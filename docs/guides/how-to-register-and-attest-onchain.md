@@ -1,6 +1,6 @@
 # How to register a schema and attest onchain
 
-This guide shows how to register a schema on the EAS Schema Registry and submit a Location Protocol attestation on-chain. It assumes you have completed the [getting started tutorial](tutorial-first-attestation.md) and have an RPC endpoint and funded Ethereum account. See [Prerequisites](#prerequisites) before starting.
+This guide shows how to anchor an implementation-agnostic Location Protocol payload onto an EVM network using the EAS reference implementation. It assumes you have completed the [getting started tutorial](tutorial-first-attestation.md) and have an RPC endpoint and funded Ethereum account. See [Prerequisites](#prerequisites) before starting.
 
 ---
 

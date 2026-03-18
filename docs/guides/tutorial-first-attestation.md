@@ -1,6 +1,6 @@
 # Build your first Location Protocol attestation
 
-In this tutorial, you will create, sign, and verify a Location Protocol attestation entirely offline — no network connection required. By the end, you will have a fully formed `SignedOffchainAttestation` object with a unique UID and a verified signature. No prior EAS or blockchain experience is needed.
+In this tutorial, you will construct a fully portable Location Protocol payload and wrap it in a cryptographically verifiable EAS offchain attestation entirely offline — no network connection required. By the end, you will have a fully formed `SignedOffchainAttestation` object with a unique UID and a verified signature. No prior EAS or blockchain experience is needed.
 
 ## Prerequisites
 
