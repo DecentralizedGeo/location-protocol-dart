@@ -81,7 +81,31 @@ See [Environment configuration reference](reference-environment.md) for how to s
 
 ---
 
-## Step 2 — Register the schema
+## Step 2 — Define your schema and LP payload
+
+Even though this guide assumes you already have a `SchemaDefinition` and `LPPayload` from the tutorial, you need them in scope here. Add the following inside `main`, after the provider setup:
+
+```dart
+  final schema = SchemaDefinition(
+    fields: [
+      SchemaField(type: 'uint256', name: 'timestamp'),
+      SchemaField(type: 'string', name: 'memo'),
+    ],
+  );
+
+  final lpPayload = LPPayload(
+    lpVersion: '1.0.0',
+    srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+    locationType: 'geojson-point',
+    location: {'type': 'Point', 'coordinates': [-103.771556, 44.967243]},
+  );
+```
+
+See [Step 1](tutorial-first-attestation.md#step-1--define-your-schema) and [Step 2](tutorial-first-attestation.md#step-2--create-an-lp-payload) of the tutorial for full details on these types.
+
+---
+
+## Step 3 — Register the schema
 
 ```dart
   final registryClient = SchemaRegistryClient(provider: provider);
@@ -96,10 +120,10 @@ See [Environment configuration reference](reference-environment.md) for how to s
   print('Transaction: ${registerResult.txHash}');
 ```
 
-> **Note:** `register()` automatically checks whether the schema already exists before sending a transaction. If it does, the call returns immediately with `RegisterResult.alreadyExisted == true` and a `null` `txHash` — no gas is spent. You can branch on this:
+> **Note:** `register()` automatically checks whether the schema already exists before sending a transaction. If it does, the call returns immediately with a `null` `txHash` — no gas is spent. You can branch on this:
 >
 > ```dart
-> if (registerResult.alreadyExisted) {
+> if (registerResult.txHash == null) {
 >   print('Schema already on-chain — reusing UID: ${registerResult.uid}');
 > } else {
 >   print('Registered: ${registerResult.txHash}');
@@ -110,7 +134,7 @@ See [Environment configuration reference](reference-environment.md) for how to s
 
 ---
 
-## Step 3 — Attest onchain
+## Step 4 — Attest onchain
 
 ```dart
   final easClient = EASClient(provider: provider);
@@ -135,7 +159,7 @@ Optional parameters: `recipient` (defaults to the zero address), `expirationTime
 
 ---
 
-## Step 4 — (Optional) Timestamp an offchain attestation
+## Step 5 — (Optional) Timestamp an offchain attestation
 
 If you have an existing `SignedOffchainAttestation` from `OffchainSigner`, you can anchor it onchain at low cost:
 
