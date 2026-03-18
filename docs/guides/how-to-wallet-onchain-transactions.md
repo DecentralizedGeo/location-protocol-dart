@@ -1,4 +1,4 @@
-# How to build a wallet-based onchain attestation
+# How to build a wallet-based onchain transaction
 
 This guide shows how to package an onchain EAS attestation for submission via an external wallet — without running a `DefaultRpcProvider`. It assumes familiarity with `EASClient` and a wallet SDK that implements `eth_sendTransaction`.
 
@@ -14,7 +14,7 @@ This guide shows how to package an onchain EAS attestation for submission via an
 
 ## Step 1 — Build the ABI-encoded calldata
 
-Use `EASClient.buildAttestCallData()` to produce the raw ABI encoding of the attestation request. This is a pure, offline operation — no RPC call, no network round-trip:
+Use the **`static`** builder methods on `EASClient` or `SchemaRegistryClient` to produce the raw ABI-encoded calldata. Because these are static methods, they run purely offline in memory — you do **not** need to instantiate the client or provide an `RpcProvider`:
 
 ```dart
 import 'package:location_protocol/location_protocol.dart';
@@ -45,16 +45,16 @@ void main() async {
 
 ## Step 2 — Build the wallet transaction request
 
-Wrap the calldata into a standard wallet transaction request map using `EASClient.buildAttestTxRequest()`. Add the following inside `main`, after `callData`:
+Wrap the calldata into a standard wallet transaction request map using `TxUtils.buildTxRequest()`. Add the following inside `main`, after `callData`:
 
 ```dart
   final chainId = 11155111; // Sepolia
   final easAddress = ChainConfig.forChainId(chainId)!.eas;
   const myWalletAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
 
-  final txRequest = EASClient.buildAttestTxRequest(
-    easAddress: easAddress,
-    callData: callData,
+  final txRequest = TxUtils.buildTxRequest(
+    to: easAddress,
+    data: callData,
     from: myWalletAddress, // omit if your wallet SDK infers the sender
   );
 
@@ -84,17 +84,50 @@ Pass the transaction request map directly to your wallet SDK. The exact API vari
 
 ---
 
+## Other Onchain Operations
+
+The exact same two-step pipeline (`buildCallData` → `TxUtils.buildTxRequest`) works for the other onchain operations.
+
+**To Register a Schema via Wallet:**
+```dart
+// 1. Build the calldata offline (static method)
+final callData = SchemaRegistryClient.buildRegisterCallData(schema);
+
+// 2. Build the transaction request targeting the Registry
+final txRequest = TxUtils.buildTxRequest(
+  to: schemaRegistryAddress, 
+  data: callData,
+  from: myWalletAddress, 
+);
+```
+
+**To Timestamp an Offchain UID via Wallet:**
+```dart
+// 1. Build the calldata offline (static method)
+final callData = EASClient.buildTimestampCallData(offchainUid);
+
+// 2. Build the transaction request targeting EAS
+final txRequest = TxUtils.buildTxRequest(
+  to: easAddress, 
+  data: callData,
+  from: myWalletAddress, 
+);
+```
+
+---
+
 ## Notes
 
 - `value` is always `'0x0'` for standard EAS attestations (no ETH transfer is needed).
 - `from` is optional — omit it if your wallet SDK derives the sender automatically from the connected account.
 - To wait for confirmation, use your wallet SDK's own receipt polling, or construct a read-only `DefaultRpcProvider` and call `provider.waitForReceipt(txHash)`.
-- `buildAttestTxRequest` does not broadcast anything — it produces a plain `Map<String, dynamic>`. Your wallet holds all signing authority.
+- The calldata builders (`buildAttestCallData`, `buildRegisterCallData`, `buildTimestampCallData`) are all **`static`**. They never require an active RPC connection or a private key.
+- `TxUtils.buildTxRequest` does not broadcast anything — it produces a plain `Map<String, dynamic>`. Your wallet holds all signing authority.
 
 ---
 
 ## What's next
 
-- [API reference — EASClient.buildAttestTxRequest](reference-api.md#easclient)
+- [API reference — TxUtils.buildTxRequest](reference-api.md#config)
 - [Tutorial: Sign attestations with an external wallet signer](tutorial-wallet-signer.md)
 - [Concepts: The Signer interface and wallet integration](explanation-concepts.md#7-the-signer-interface-and-wallet-integration)
