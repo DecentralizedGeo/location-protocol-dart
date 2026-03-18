@@ -197,6 +197,6 @@ void main() async {
 ## What's next
 
 - [Concepts: The Signer interface and wallet integration](explanation-concepts.md#7-the-signer-interface-and-wallet-integration)
-- [How to build a wallet-based onchain attestation](how-to-wallet-onchain-attest.md)
+- [How to build a wallet-based onchain transaction](how-to-wallet-onchain-transactions.md)
 - [API reference — Signer](reference-api.md#signer)
 - [API reference — OffchainSigner](reference-api.md#offchainsigner)

@@ -41,7 +41,10 @@ classDiagram
     class EASClient {
         +attest() AttestResult
         +timestamp() TimestampResult
-        +buildAttestTxRequest() Map
+    }
+    class TxUtils {
+        <<static>>
+        +buildTxRequest() Map
     }
     class SchemaRegistryClient {
         +register() RegisterResult
@@ -381,7 +384,6 @@ If `easAddress` is omitted, the address is resolved from `ChainConfig` using `pr
 |---|---|---|---|
 | `buildTimestampCallData(String uid)` | `uid: String` | `Uint8List` | ABI-encodes call data for `EAS.timestamp(bytes32)` |
 | `buildAttestCallData({...})` | `required schema`, `required lpPayload`, `required userData`, `recipient: String = zeroAddress`, `expirationTime: BigInt?`, `refUID: String?` | `Uint8List` | ABI-encodes call data for `EAS.attest(AttestationRequest)` |
-| `buildAttestTxRequest({...})` | `required easAddress: String`, `required callData: Uint8List`, `from: String?`, `value: BigInt?` | `Map<String, dynamic>` | Wraps ABI-encoded calldata into a wallet-friendly `{to, data, value, from?}` transaction request map. `data` is `0x`-prefixed hex. `value` defaults to `'0x0'`. `from` is omitted when not provided. Pass to any wallet SDK implementing `eth_sendTransaction`. See [How to build a wallet-based onchain attestation](how-to-wallet-onchain-attest.md) |
 
 **Instance methods**
 
@@ -455,6 +457,18 @@ Contract addresses and metadata for a specific EVM chain.
 | `eas` | `String` | EAS contract address |
 | `schemaRegistry` | `String` | SchemaRegistry contract address |
 | `chainName` | `String` | Human-readable chain name (e.g. `"Sepolia"`) |
+
+---
+
+## TxUtils
+
+Static utility for constructing general wallet transaction maps.
+
+**Static methods**
+
+| Method | Parameters | Returns | Description |
+|---|---|---|---|
+| `buildTxRequest({...})` | `required to: String`, `required data: Uint8List`, `from: String?`, `value: BigInt?` | `Map<String, dynamic>` | Wraps ABI-encoded calldata into a wallet-friendly `{to, data, value, from?}` transaction request map. `data` is `0x`-prefixed hex. `value` defaults to `'0x0'`. Pass to any wallet SDK implementing `eth_sendTransaction`. |
 
 ---
 

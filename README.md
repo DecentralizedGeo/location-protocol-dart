@@ -182,11 +182,12 @@ flowchart TD
   subgraph "RPC Required"
     EC["EASClient"]
     SR["SchemaRegistryClient"]
+    TU["TxUtils"]
     AE --> EC
     AE --> SR
     EC -->|"attest()"| AR["AttestResult"]
     EC -->|"timestamp()"| TR["TimestampResult"]
-    EC -->|"buildAttestTxRequest()"| WR["WalletTxRequest"]
+    TU -->|"buildTxRequest()"| WR["WalletTxRequest"]
     SR -->|"register() (EIP-1559)"| RR["RegisterResult"]
   end
 ```
@@ -198,7 +199,7 @@ flowchart TD
 - [Getting started tutorial](docs/guides/tutorial-first-attestation.md)
 - [Tutorial: Sign with a wallet signer](docs/guides/tutorial-wallet-signer.md)
 - [How to register and attest onchain](docs/guides/how-to-register-and-attest-onchain.md)
-- [How to build a wallet-based onchain attestation](docs/guides/how-to-wallet-onchain-attest.md)
+- [How to build a wallet-based onchain transaction](docs/guides/how-to-wallet-onchain-transactions.md)
 - [How to add a custom location type](docs/guides/how-to-add-custom-location-type.md)
 - [Environment configuration reference](docs/guides/reference-environment.md)
 - [API reference](docs/guides/reference-api.md)

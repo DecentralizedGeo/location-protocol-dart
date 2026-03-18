@@ -138,7 +138,7 @@ ECDSA produces a recovery identifier alongside `r` and `s`. Different signers re
 
 ### The wallet transaction request helper
 
-For onchain attestations, the wallet integration challenge is different: the library must produce a transaction that the wallet signs and submits, rather than performing it internally via `DefaultRpcProvider`. `EASClient.buildAttestTxRequest()` produces a `Map<String, dynamic>` with `to`, `data`, `value`, and an optional `from` key — the standard fields any Ethereum wallet SDK accepts for `eth_sendTransaction`. The library produces the request; the wallet sends it.
+For onchain attestations, the wallet integration challenge is different: the library must produce a transaction that the wallet signs and submits, rather than performing it internally via `DefaultRpcProvider`. `TxUtils.buildTxRequest()` produces a `Map<String, dynamic>` with `to`, `data`, `value`, and an optional `from` key — the standard fields any Ethereum wallet SDK accepts for `eth_sendTransaction`. The library produces the request; the wallet sends it.
 
 ---
 
