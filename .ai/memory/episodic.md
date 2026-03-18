@@ -160,3 +160,10 @@
   - `buildAttestTxRequest` value: always hex string (e.g. `'0x0'` for zero)
 - **Verification**: 93/93 unit tests pass across all test directories (no regressions)
 - **Commits**: 5 clean commits on `main` — `feat: add EIP712Signature.fromHex()`, `feat: add Signer abstract class and LocalKeySigner implementation`, `feat: expose buildOffchainTypedDataJson and computeOffchainUID as public utilities`, `feat: refactor OffchainSigner to accept Signer, add fromPrivateKey factory`, `feat: add EASClient.buildAttestTxRequest() wallet-friendly tx helper`, `feat: update barrel exports to include Signer and LocalKeySigner`
+
+### [ID: PHASE8.1_DOC_REFRAMING] -> Follows [PHASE8_SIGNER_INTERFACE_EXEC]
+- Date: 2026-03-18
+- Event: Phase 8.1 Documentation Reframing
+- Status: COMPLETED
+- Context: Reframed the documentation to explicitly decouple the chain-agnostic Location Protocol payload from the Ethereum-specific EAS Reference Envelope. Clarified portability to non-EVM chains like Solana and Filecoin using native wrappers.
+- Commits: 1 commit on `main` — `docs: Phase 8.1 documentation reframing (reference implementation and EAS envelope)`

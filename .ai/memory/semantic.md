@@ -91,3 +91,6 @@
   - Public statics: `buildOffchainTypedDataJson(...)` (JSON-safe map with decimal string uints), `computeOffchainUID(...)` (keccak256 of packed fields)
 - **`EASClient.buildAttestTxRequest`**: Static helper wrapping ABI-encoded calldata into `{to, data, value, from?}` transaction map for `eth_sendTransaction`.
 - **Wallet adapter pattern**: Subclass `Signer`, override `signTypedData` to call `eth_signTypedData_v4`, parse result via `EIP712Signature.fromHex`, throw `UnsupportedError` in `signDigest`.
+
+### Phase 8.1 Documentation Semantics
+- **EAS Reference Envelope vs LP Payload**: The Location Protocol payload (the 4 base fields) is completely implementation-agnostic and universally portable. EAS acts strictly as the **Reference Envelope** for EVM networks, providing EIP-712 signing and onchain anchoring. The LP payload can be wrapped safely in Solana or Filecoin native attestation services without changing its inherent data structure.

@@ -77,3 +77,6 @@
 - **`fromPrivateKey` backward compat**: The primary constructor now takes `Signer`; all old call sites using `OffchainSigner(privateKeyHex:)` must be updated to `OffchainSigner.fromPrivateKey(privateKeyHex:)`.
 - **`buildAttestTxRequest` value encoding**: Always encode the ETH value as a `0x`-prefixed hex string (`BigInt.toRadixString(16)`), not decimal. Default is `'0x0'`.
 - **`from` key conditional inclusion**: In `buildAttestTxRequest`, include `from` ONLY if provided using Dart's conditional map entry syntax (`if (from != null) 'from': from`). Wallet SDKs that infer `from` from the connected wallet will fail if an explicit `null` string is passed.
+
+### Phase 8.1 Documentation Patterns
+- **Conceptual Separation in Docs**: When describing the library or its capabilities, explicitly maintain the conceptual separation between the portable Location Protocol payload and the EVM-specific EAS envelope. Do not conflate the portability of the payload with the EVM-bound nature of the EAS signature.
