@@ -330,7 +330,7 @@ const _offchainSigningPrerequisite =
 
   final easAddress = ChainConfig.forChainId(chainId)!.eas;
 
-  final signer = OffchainSigner(
+  final signer = OffchainSigner.fromPrivateKey(
     privateKeyHex: testPrivateKey,
     chainId: chainId,
     easContractAddress: easAddress,

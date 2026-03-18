@@ -114,6 +114,28 @@ Built-in types cannot be overridden. Attempting to call `register()` with a name
 
 ---
 
+## 7. The Signer Interface and Wallet Integration
+
+The library's signing layer was originally designed for server-side and CLI contexts, where a raw private key hex string is available directly in memory. For mobile applications and browser-based apps, this model is unsafe: the application should never handle a private key at all. Instead, the signing capability is delegated to an external wallet — a Privy embedded wallet, MetaMask, WalletConnect, or a hardware Secure Enclave — that holds the key and performs the signature on behalf of the user.
+
+`Signer` is the abstract class that models this separation. `OffchainSigner` no longer owns the signing operation: it owns EIP-712 typed data construction, UID derivation, and verification logic. The actual cryptographic signing is delegated to whatever `Signer` implementation the caller provides.
+
+### Why `signTypedData` rather than `signDigest`
+
+This is the most consequential design decision in the interface. Wallets that implement `eth_signTypedData_v4` receive the full structured message — the typed data JSON — and perform their own hashing internally. This is not incidental; it is a security feature. By receiving structured fields rather than an opaque digest, the wallet can display those fields to the user before they approve the signature. If the library passed a pre-hashed digest, the wallet would have no way to show the user what they are signing, and the safety guarantee of EIP-712 would be undermined.
+
+The default `signTypedData` implementation on `Signer` handles the `LocalKeySigner` case: it calls `Eip712TypedData.fromJson(typedData).encode()` to compute the 32-byte digest, then delegates to `signDigest`. Wallet-backed `Signer` implementations override `signTypedData` entirely — passing the raw JSON map directly to the wallet SDK — and throw `UnsupportedError` in `signDigest` to mark it as intentionally unreachable.
+
+### The `v` recovery ID and wallet normalization
+
+ECDSA produces a recovery identifier alongside `r` and `s`. Different signers represent this value differently: some wallets (Ledger, certain Privy builds) return `v = 0` or `v = 1`, while Ethereum convention uses `v = 27` or `v = 28`. The library normalizes `v` to 27/28 inside `OffchainSigner.signOffchainAttestation()`, not inside `Signer` itself. This means all `Signer` implementations can return whichever convention their backend uses, and the normalization happens exactly once at the boundary where it is always needed.
+
+### The wallet transaction request helper
+
+For onchain attestations, the wallet integration challenge is different: the library must produce a transaction that the wallet signs and submits, rather than performing it internally via `DefaultRpcProvider`. `EASClient.buildAttestTxRequest()` produces a `Map<String, dynamic>` with `to`, `data`, `value`, and an optional `from` key — the standard fields any Ethereum wallet SDK accepts for `eth_sendTransaction`. The library produces the request; the wallet sends it.
+
+---
+
 ## See also
 
 - [Base Data Model Specification](https://spec.decentralizedgeo.org/specification/data-model/)
@@ -122,3 +144,4 @@ Built-in types cannot be overridden. Attempting to call `register()` with a name
 - [EIP-712 Typed Data Signing](https://eips.ethereum.org/EIPS/eip-712)
 - [API Reference](reference-api.md)
 - [Getting Started Tutorial](tutorial-first-attestation.md)
+- [Tutorial: Sign with a wallet signer](tutorial-wallet-signer.md)

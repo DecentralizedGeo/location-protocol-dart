@@ -6,12 +6,12 @@ This page documents the environment variables used by `location_protocol` for on
 
 ## When environment configuration is required
 
-`DefaultRpcProvider` requires an RPC URL, a private key, and a chain ID at construction time. `EASClient` and `SchemaRegistryClient` use environment configuration only when constructed with a `DefaultRpcProvider`. Classes that operate entirely in memory — `LPPayload`, `SchemaDefinition`, `SchemaField`, `SchemaUID`, `OffchainSigner` (which takes a private key as a constructor argument), `LocationValidator`, `LocationSerializer`, and all model classes — require no environment configuration.
+`DefaultRpcProvider` requires an RPC URL, a private key, and a chain ID at construction time. `EASClient` and `SchemaRegistryClient` use environment configuration only when constructed with a `DefaultRpcProvider`. Classes that operate entirely in memory — `LPPayload`, `SchemaDefinition`, `SchemaField`, `SchemaUID`, `OffchainSigner` (and its `fromPrivateKey` factory), `Signer`, `LocalKeySigner`, `LocationValidator`, `LocationSerializer`, and all model classes — require no environment configuration.
 
 | Needs env config | Does NOT need env config |
 |---|---|
 | `DefaultRpcProvider` | `LPPayload`, `SchemaDefinition`, `SchemaField`, `SchemaUID` |
-| `EASClient` (when using `DefaultRpcProvider`) | `OffchainSigner` |
+| `EASClient` (when using `DefaultRpcProvider`) | `OffchainSigner`, `Signer`, `LocalKeySigner` |
 | `SchemaRegistryClient` (when using `DefaultRpcProvider`) | `LocationValidator`, `LocationSerializer` |
 | | `SignedOffchainAttestation`, `VerificationResult`, all model classes |
 

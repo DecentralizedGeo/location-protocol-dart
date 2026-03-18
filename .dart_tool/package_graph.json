@@ -8,6 +8,7 @@
       "version": "0.1.0",
       "dependencies": [
         "blockchain_utils",
+        "geobase",
         "on_chain"
       ],
       "devDependencies": [
@@ -50,6 +51,14 @@
         "web_socket_channel",
         "webkit_inspection_protocol",
         "yaml"
+      ]
+    },
+    {
+      "name": "geobase",
+      "version": "1.5.0",
+      "dependencies": [
+        "meta",
+        "proj4dart"
       ]
     },
     {
@@ -320,6 +329,20 @@
       ]
     },
     {
+      "name": "proj4dart",
+      "version": "2.1.0",
+      "dependencies": [
+        "meta",
+        "mgrs_dart",
+        "wkt_parser"
+      ]
+    },
+    {
+      "name": "meta",
+      "version": "1.18.1",
+      "dependencies": []
+    },
+    {
       "name": "pointycastle",
       "version": "4.0.0",
       "dependencies": [
@@ -378,11 +401,6 @@
         "source_maps",
         "stack_trace"
       ]
-    },
-    {
-      "name": "meta",
-      "version": "1.18.1",
-      "dependencies": []
     },
     {
       "name": "glob",
@@ -466,11 +484,37 @@
       ]
     },
     {
+      "name": "wkt_parser",
+      "version": "2.0.0",
+      "dependencies": []
+    },
+    {
+      "name": "mgrs_dart",
+      "version": "2.0.0",
+      "dependencies": [
+        "unicode"
+      ]
+    },
+    {
       "name": "file",
       "version": "7.0.1",
       "dependencies": [
         "meta",
         "path"
+      ]
+    },
+    {
+      "name": "unicode",
+      "version": "0.3.1",
+      "dependencies": [
+        "lists"
+      ]
+    },
+    {
+      "name": "lists",
+      "version": "1.0.1",
+      "dependencies": [
+        "meta"
       ]
     }
   ],

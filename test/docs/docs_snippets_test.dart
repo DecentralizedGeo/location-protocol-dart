@@ -17,7 +17,7 @@ void main() {
     final sepoliaRpcUrl = env['SEPOLIA_RPC_URL'] ?? '';
     final sepoliaPrivateKey = env['SEPOLIA_PRIVATE_KEY'] ?? '';
 
-    test('Quick Start (L83)', () async {
+    test('Quick Start (L85)', () async {
       if (sepoliaRpcUrl.isEmpty || sepoliaPrivateKey.isEmpty) {
         markTestSkipped('Missing SEPOLIA_RPC_URL or SEPOLIA_PRIVATE_KEY in .env');
         return;
@@ -53,7 +53,7 @@ void main() {
         const privateKeyHex = 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'; // 64 hex chars, no 0x prefix
         final addresses = ChainConfig.forChainId(11155111)!; // Sepolia
       
-        final signer = OffchainSigner(
+        final signer = OffchainSigner.fromPrivateKey(
           privateKeyHex: privateKeyHex,
           chainId: 11155111,
           easContractAddress: addresses.eas,
@@ -336,7 +336,7 @@ void main() {
 
             final easAddress = ChainConfig.forChainId(chainId)!.eas;
 
-            final signer = OffchainSigner(
+            final signer = OffchainSigner.fromPrivateKey(
               privateKeyHex: testPrivateKey,
               chainId: chainId,
               easContractAddress: easAddress,
@@ -391,6 +391,123 @@ void main() {
           }
           rethrow;
         }
+      });
+
+    });
+
+  });
+
+  group('how-to-wallet-onchain-attest', () {
+    group('Step sequence', () {
+      test('Step 1 — Build the ABI-encoded calldata (L20)', () async {
+
+          final schema = SchemaDefinition(
+            fields: [SchemaField(type: 'string', name: 'memo')],
+          );
+
+          final lpPayload = LPPayload(
+            lpVersion: '1.0.0',
+            srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+            locationType: 'geojson-point',
+            location: {'type': 'Point', 'coordinates': [-73.9857, 40.7484]},
+          );
+
+          final callData = EASClient.buildAttestCallData(
+            schema: schema,
+            lpPayload: lpPayload,
+            userData: {'memo': 'My attestation'},
+          );
+
+          print('callData length: ${callData.length}');
+      });
+
+      test('Step 2 — Build the wallet transaction request (L51)', () async {
+
+          final schema = SchemaDefinition(
+            fields: [SchemaField(type: 'string', name: 'memo')],
+          );
+
+          final lpPayload = LPPayload(
+            lpVersion: '1.0.0',
+            srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+            locationType: 'geojson-point',
+            location: {'type': 'Point', 'coordinates': [-73.9857, 40.7484]},
+          );
+
+          final callData = EASClient.buildAttestCallData(
+            schema: schema,
+            lpPayload: lpPayload,
+            userData: {'memo': 'My attestation'},
+          );
+
+          print('callData length: ${callData.length}');
+
+          final chainId = 11155111; // Sepolia
+          final easAddress = ChainConfig.forChainId(chainId)!.eas;
+          const myWalletAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+
+          final txRequest = EASClient.buildAttestTxRequest(
+            easAddress: easAddress,
+            callData: callData,
+            from: myWalletAddress, // omit if your wallet SDK infers the sender
+          );
+
+          // txRequest is:
+          // {
+          //   'to':    '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+          //   'data':  '0x<abi-encoded calldata>',
+          //   'value': '0x0',
+          //   'from':  '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+          // }
+          print('to:    ${txRequest['to']}');
+          print('value: ${txRequest['value']}');
+      });
+
+      test('Step 3 — Submit via your wallet SDK (L79)', () async {
+
+          final schema = SchemaDefinition(
+            fields: [SchemaField(type: 'string', name: 'memo')],
+          );
+
+          final lpPayload = LPPayload(
+            lpVersion: '1.0.0',
+            srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+            locationType: 'geojson-point',
+            location: {'type': 'Point', 'coordinates': [-73.9857, 40.7484]},
+          );
+
+          final callData = EASClient.buildAttestCallData(
+            schema: schema,
+            lpPayload: lpPayload,
+            userData: {'memo': 'My attestation'},
+          );
+
+          print('callData length: ${callData.length}');
+
+          final chainId = 11155111; // Sepolia
+          final easAddress = ChainConfig.forChainId(chainId)!.eas;
+          const myWalletAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+
+          final txRequest = EASClient.buildAttestTxRequest(
+            easAddress: easAddress,
+            callData: callData,
+            from: myWalletAddress, // omit if your wallet SDK infers the sender
+          );
+
+          // txRequest is:
+          // {
+          //   'to':    '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+          //   'data':  '0x<abi-encoded calldata>',
+          //   'value': '0x0',
+          //   'from':  '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+          // }
+          print('to:    ${txRequest['to']}');
+          print('value: ${txRequest['value']}');
+
+          // Pass txRequest to your wallet SDK — exact API varies by SDK:
+          // Privy:       final txHash = await privy.sendTransaction(txRequest);
+          // FlutterWeb3: final txHash = await provider.request('eth_sendTransaction', [txRequest]);
+          print('Transaction request ready: $txRequest');
       });
 
     });
@@ -505,7 +622,7 @@ void main() {
         
           final easAddress = ChainConfig.forChainId(chainId)!.eas;
         
-          final signer = OffchainSigner(
+          final signer = OffchainSigner.fromPrivateKey(
             privateKeyHex: testPrivateKey,
             chainId: chainId,
             easContractAddress: easAddress,
@@ -556,7 +673,7 @@ void main() {
         
           final easAddress = ChainConfig.forChainId(chainId)!.eas;
         
-          final signer = OffchainSigner(
+          final signer = OffchainSigner.fromPrivateKey(
             privateKeyHex: testPrivateKey,
             chainId: chainId,
             easContractAddress: easAddress,
@@ -619,7 +736,7 @@ void main() {
         
           final easAddress = ChainConfig.forChainId(chainId)!.eas;
         
-          final signer = OffchainSigner(
+          final signer = OffchainSigner.fromPrivateKey(
             privateKeyHex: testPrivateKey,
             chainId: chainId,
             easContractAddress: easAddress,
@@ -692,7 +809,7 @@ void main() {
       
         final easAddress = ChainConfig.forChainId(chainId)!.eas;
       
-        final signer = OffchainSigner(
+        final signer = OffchainSigner.fromPrivateKey(
           privateKeyHex: testPrivateKey,
           chainId: chainId,
           easContractAddress: easAddress,
@@ -729,6 +846,116 @@ void main() {
         print('r: ${signed.signature.r}');
         print('s: ${signed.signature.s}');
         print('v: ${signed.signature.v}');
+    });
+
+  });
+
+  group('tutorial-wallet-signer', () {
+    group('Step sequence', () {
+      test('Step 2 — Wire the signer into `OffchainSigner` (L91)', () async {
+        // Replace with your wallet-backed Signer implementation:
+          const privateKeyHex =
+              'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+
+          final walletSigner = LocalKeySigner(privateKeyHex: privateKeyHex);
+
+          final chainId = 11155111; // Sepolia
+          final easAddress = ChainConfig.forChainId(chainId)!.eas;
+
+          final offchainSigner = OffchainSigner(
+            signer: walletSigner,
+            chainId: chainId,
+            easContractAddress: easAddress,
+          );
+
+          print('Signer address: ${offchainSigner.signerAddress}');
+          // => Signer address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+      });
+
+      test('Step 3 — Sign and verify an attestation (L119)', () async {
+        // Replace with your wallet-backed Signer implementation:
+          const privateKeyHex =
+              'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+
+          final walletSigner = LocalKeySigner(privateKeyHex: privateKeyHex);
+
+          final chainId = 11155111; // Sepolia
+          final easAddress = ChainConfig.forChainId(chainId)!.eas;
+
+          final offchainSigner = OffchainSigner(
+            signer: walletSigner,
+            chainId: chainId,
+            easContractAddress: easAddress,
+          );
+
+          print('Signer address: ${offchainSigner.signerAddress}');
+          // => Signer address: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+
+          final schema = SchemaDefinition(
+            fields: [SchemaField(type: 'string', name: 'memo')],
+          );
+
+          final lpPayload = LPPayload(
+            lpVersion: '1.0.0',
+            srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+            locationType: 'geojson-point',
+            location: {'type': 'Point', 'coordinates': [-73.9857, 40.7484]},
+          );
+
+          final signed = await offchainSigner.signOffchainAttestation(
+            schema: schema,
+            lpPayload: lpPayload,
+            userData: {'memo': 'Signed via wallet adapter'},
+          );
+
+          print('UID:    ${signed.uid}');
+          print('Signer: ${signed.signer}');
+
+          final result = offchainSigner.verifyOffchainAttestation(signed);
+          print('Valid:  ${result.isValid}');
+          // => Valid:  true
+      });
+
+    });
+
+    test('Complete program listing (L153)', () async {
+
+        const privateKeyHex =
+            'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+
+        // In production: replace with your wallet-backed Signer implementation.
+        final walletSigner = LocalKeySigner(privateKeyHex: privateKeyHex);
+        final chainId = 11155111;
+        final easAddress = ChainConfig.forChainId(chainId)!.eas;
+
+        final offchainSigner = OffchainSigner(
+          signer: walletSigner,
+          chainId: chainId,
+          easContractAddress: easAddress,
+        );
+
+        final schema = SchemaDefinition(
+          fields: [SchemaField(type: 'string', name: 'memo')],
+        );
+
+        final lpPayload = LPPayload(
+          lpVersion: '1.0.0',
+          srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+          locationType: 'geojson-point',
+          location: {'type': 'Point', 'coordinates': [-73.9857, 40.7484]},
+        );
+
+        final signed = await offchainSigner.signOffchainAttestation(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {'memo': 'Signed via wallet adapter'},
+        );
+
+        print('UID:    ${signed.uid}');
+        print('Signer: ${signed.signer}');
+
+        final result = offchainSigner.verifyOffchainAttestation(signed);
+        print('Valid:  ${result.isValid}');
     });
 
   });

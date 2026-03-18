@@ -24,7 +24,7 @@ sequenceDiagram
     SD-->>Code: schema (toEASSchemaString() ready)
     Code->>LP: LPPayload(lpVersion:, srs:, locationType:, location:)
     LP-->>Code: lpPayload (validated)
-    Code->>OS: OffchainSigner(privateKeyHex:, chainId:, easContractAddress:)
+    Code->>OS: OffchainSigner.fromPrivateKey(privateKeyHex:, chainId:, easContractAddress:)
     OS-->>Code: signer
     Code->>OS: signOffchainAttestation(schema:, lpPayload:, userData:)
     OS->>OS: generate salt, ABI encode, hash, EIP-712 sign
@@ -112,7 +112,7 @@ Still inside `main`, add the following after `lpPayload`:
 
   final easAddress = ChainConfig.forChainId(chainId)!.eas;
 
-  final signer = OffchainSigner(
+  final signer = OffchainSigner.fromPrivateKey(
     privateKeyHex: testPrivateKey,
     chainId: chainId,
     easContractAddress: easAddress,
@@ -234,7 +234,7 @@ void main() async {
 
   final easAddress = ChainConfig.forChainId(chainId)!.eas;
 
-  final signer = OffchainSigner(
+  final signer = OffchainSigner.fromPrivateKey(
     privateKeyHex: testPrivateKey,
     chainId: chainId,
     easContractAddress: easAddress,
@@ -281,5 +281,6 @@ void main() async {
 Your `SignedOffchainAttestation` is ready to share, store, or anchor on-chain. Here are your next steps:
 
 - [Register a schema and attest onchain](how-to-register-and-attest-onchain.md)
-- [API reference — OffchainSigner](reference-api.md#ofchainsigner)
+- [Sign attestations with an external wallet](tutorial-wallet-signer.md)
+- [API reference — OffchainSigner](reference-api.md#offchainsigner)
 - [Concepts: Offchain vs onchain attestations](explanation-concepts.md#4-offchain-vs-onchain-attestations)

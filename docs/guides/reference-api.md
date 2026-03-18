@@ -20,14 +20,28 @@ classDiagram
         +String locationType
         +dynamic location
     }
+    class Signer {
+        <<abstract>>
+        +String address
+        +signDigest(Uint8List) Future~EIP712Signature~
+        +signTypedData(Map) Future~EIP712Signature~
+    }
+    class LocalKeySigner {
+        +LocalKeySigner(privateKeyHex)
+        +String address
+    }
     class OffchainSigner {
         +String signerAddress
+        +fromPrivateKey() OffchainSigner
+        +buildOffchainTypedDataJson() Map
+        +computeOffchainUID() String
         +signOffchainAttestation() SignedOffchainAttestation
         +verifyOffchainAttestation() VerificationResult
     }
     class EASClient {
         +attest() AttestResult
         +timestamp() TimestampResult
+        +buildAttestTxRequest() Map
     }
     class SchemaRegistryClient {
         +register() RegisterResult
@@ -47,7 +61,15 @@ classDiagram
         +String uid
         +int blockNumber
     }
+    class EIP712Signature {
+        +int v
+        +String r
+        +String s
+        +fromHex() EIP712Signature
+    }
 
+    LocalKeySigner --|> Signer : extends
+    OffchainSigner --> Signer : delegates to
     SchemaDefinition "1" *-- "many" SchemaField
     OffchainSigner --> AbiEncoder : uses internally
     EASClient --> RpcProvider : depends on
@@ -247,29 +269,92 @@ The encoding order matches `SchemaDefinition.allFields`: LP fields first (`lp_ve
 
 ---
 
-## OffchainSigner
+## Signer
 
-EIP-712 v2 offchain attestation signing and verification. No RPC connection required. See [EIP-712](https://eips.ethereum.org/EIPS/eip-712).
+Abstract base class for EIP-712 signing. Implement this interface to use any wallet SDK, hardware device, or key management system with `OffchainSigner`. See [Concepts: The Signer interface and wallet integration](explanation-concepts.md#7-the-signer-interface-and-wallet-integration).
+
+**Abstract properties / methods**
+
+| Name | Type | Description |
+|---|---|---|
+| `address` | `String` (getter) | Ethereum address of the signing key |
+| `signDigest(Uint8List digest)` | `Future<EIP712Signature>` | Signs a pre-computed 32-byte EIP-712 digest. Must NOT hash again — pass the digest as-is |
+| `signTypedData(Map<String, dynamic> typedData)` | `Future<EIP712Signature>` | Default: calls `Eip712TypedData.fromJson(typedData).encode()` to compute the digest, then delegates to `signDigest`. Override this to call `eth_signTypedData_v4` in wallet-backed implementations |
+
+**Wallet adapter pattern**
+
+Use `extends Signer` (not `implements`) to inherit the default `signTypedData` body. Override `signTypedData` to call your wallet SDK's `eth_signTypedData_v4`, parse the result with `EIP712Signature.fromHex()`, and throw `UnsupportedError` in `signDigest`:
+
+> ```dart
+> class MyWalletSigner extends Signer {
+>   @override
+>   String get address => '0xYourAddress';
+>
+>   @override
+>   Future<EIP712Signature> signTypedData(Map<String, dynamic> typedData) async {
+>     final hexSig = await walletSdk.signTypedDataV4(jsonEncode(typedData));
+>     return EIP712Signature.fromHex(hexSig);
+>   }
+>
+>   @override
+>   Future<EIP712Signature> signDigest(Uint8List digest) =>
+>       throw UnsupportedError('Use signTypedData for wallet signers');
+> }
+> ```
+
+---
+
+## LocalKeySigner
+
+Standard `Signer` implementation for local key / server-side signing. Wraps `ETHPrivateKey` from `on_chain`. Inherits the default `signTypedData` behavior — no override needed.
 
 **Constructor**
 
-`OffchainSigner({required String privateKeyHex, required int chainId, required String easContractAddress, String easVersion = '1.0.0'})`
+`LocalKeySigner({required String privateKeyHex})`
 
 **Properties**
 
 | Property | Type | Description |
 |---|---|---|
-| `signerAddress` | `String` | Ethereum address derived from the private key |
+| `address` | `String` | Ethereum address derived from the private key |
+
+---
+
+## OffchainSigner
+
+EIP-712 v2 offchain attestation signing and verification. No RPC connection required. See [EIP-712](https://eips.ethereum.org/EIPS/eip-712).
+
+**Primary constructor**
+
+`OffchainSigner({required Signer signer, required int chainId, required String easContractAddress, String easVersion = '1.0.0'})`
+
+**Factory**
+
+`OffchainSigner.fromPrivateKey({required String privateKeyHex, required int chainId, required String easContractAddress, String easVersion = '1.0.0'})` — backward-compatible convenience factory; wraps `LocalKeySigner` internally.
+
+**Properties**
+
+| Property | Type | Description |
+|---|---|---|
+| `signer` | `Signer` | The signing backend used for EIP-712 operations |
+| `signerAddress` | `String` | Delegates to `signer.address` |
 | `chainId` | `int` | Chain ID the signer is configured for |
 | `easContractAddress` | `String` | EAS contract address used in the EIP-712 domain |
 | `easVersion` | `String` | EAS version string used in the EIP-712 domain (default `"1.0.0"`) |
 
-**Methods**
+**Instance methods**
 
 | Method | Parameters | Returns | Description |
 |---|---|---|---|
 | `signOffchainAttestation({...})` | `required schema: SchemaDefinition`, `required lpPayload: LPPayload`, `required userData: Map<String, dynamic>`, `recipient: String = zeroAddress`, `time: BigInt?`, `expirationTime: BigInt?`, `refUID: String?`, `salt: Uint8List?` | `Future<SignedOffchainAttestation>` | Signs an offchain attestation using EIP-712 typed data. Generates a random salt if none provided |
 | `verifyOffchainAttestation(SignedOffchainAttestation attestation)` | `attestation: SignedOffchainAttestation` | `VerificationResult` | Recovers the signer address and validates the UID. Synchronous |
+
+**Static methods**
+
+| Method | Parameters | Returns | Description |
+|---|---|---|---|
+| `buildOffchainTypedDataJson({...})` | `chainId, easContractAddress, schemaUID, recipient, time, expirationTime, revocable, refUID, data, salt, easVersion` | `Map<String, dynamic>` | Returns a JSON-safe EIP-712 typed data map. All `uint*` values are decimal strings; all `bytes*`/`address` values are `0x`-prefixed hex strings. Safe to pass to `eth_signTypedData_v4` or `Eip712TypedData.fromJson()` |
+| `computeOffchainUID({...})` | `schemaUID, recipient, time, expirationTime, revocable, refUID, data, salt` | `String` | Computes the EAS offchain UID v2 via packed keccak256. Returns a `0x`-prefixed hex string |
 
 ---
 
@@ -296,6 +381,7 @@ If `easAddress` is omitted, the address is resolved from `ChainConfig` using `pr
 |---|---|---|---|
 | `buildTimestampCallData(String uid)` | `uid: String` | `Uint8List` | ABI-encodes call data for `EAS.timestamp(bytes32)` |
 | `buildAttestCallData({...})` | `required schema`, `required lpPayload`, `required userData`, `recipient: String = zeroAddress`, `expirationTime: BigInt?`, `refUID: String?` | `Uint8List` | ABI-encodes call data for `EAS.attest(AttestationRequest)` |
+| `buildAttestTxRequest({...})` | `required easAddress: String`, `required callData: Uint8List`, `from: String?`, `value: BigInt?` | `Map<String, dynamic>` | Wraps ABI-encoded calldata into a wallet-friendly `{to, data, value, from?}` transaction request map. `data` is `0x`-prefixed hex. `value` defaults to `'0x0'`. `from` is omitted when not provided. Pass to any wallet SDK implementing `eth_sendTransaction`. See [How to build a wallet-based onchain attestation](how-to-wallet-onchain-attest.md) |
 
 **Instance methods**
 
@@ -525,6 +611,12 @@ An EIP-712 ECDSA signature with `v`, `r`, `s` components.
 | `v` | `int` | Recovery id (27 or 28) |
 | `r` | `String` | The `r` component as a `0x`-prefixed hex string |
 | `s` | `String` | The `s` component as a `0x`-prefixed hex string |
+
+**Factory constructors**
+
+| Constructor | Parameters | Description |
+|---|---|---|
+| `EIP712Signature.fromHex(String rawSig)` | `rawSig: String` | Parses a 65-byte `0x`-prefixed hex signature (as returned by `eth_signTypedData_v4`) into `v`, `r`, `s`. Byte layout: `r[0..31] \|\| s[32..63] \|\| v[64]`. Throws `ArgumentError` if the decoded length is not 65 bytes |
 
 ---
 

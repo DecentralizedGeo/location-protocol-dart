@@ -29,6 +29,8 @@ This library provides the Dart equivalent of the signature service layer in the 
 - **EIP-712 Version 2 offchain signing and verification** — CSPRNG salt, no RPC needed; fully portable attestations
 - **Onchain schema registration, attestation, and offchain UID timestamping** — via EIP-1559 transactions through `EASClient` and `SchemaRegistryClient`
 - **Extensible custom location type registration** — add your own validators via `LocationValidator.register()`
+- **Abstract `Signer` interface** — decouple signing from key management; implement `Signer` to use any wallet SDK (Privy, MetaMask, WalletConnect) or hardware device
+- **Wallet-friendly onchain TX helper** — `EASClient.buildAttestTxRequest()` packages ABI-encoded calldata into a `{to, data, value, from?}` map ready for `eth_sendTransaction` via any external wallet
 
 ---
 
@@ -108,7 +110,7 @@ Future<void> main() async {
   const privateKeyHex = 'YOUR_PRIVATE_KEY_HEX'; // 64 hex chars, no 0x prefix
   final addresses = ChainConfig.forChainId(11155111)!; // Sepolia
 
-  final signer = OffchainSigner(
+  final signer = OffchainSigner.fromPrivateKey(
     privateKeyHex: privateKeyHex,
     chainId: 11155111,
     easContractAddress: addresses.eas,
@@ -154,10 +156,14 @@ Future<void> main() async {
 ```mermaid
 flowchart TD
   subgraph "No RPC Required"
+    SK["Signer (abstract)"]
+    LKS["LocalKeySigner"]
     LP["LPPayload"]
     SD["SchemaDefinition"]
     AE["AbiEncoder"]
     OS["OffchainSigner"]
+    LKS -->|implements| SK
+    SK --> OS
     LP --> AE
     SD --> AE
     AE --> OS
@@ -171,6 +177,7 @@ flowchart TD
     AE --> SR
     EC -->|"attest()"| AR["AttestResult"]
     EC -->|"timestamp()"| TR["TimestampResult"]
+    EC -->|"buildAttestTxRequest()"| WR["WalletTxRequest"]
     SR -->|"register() (EIP-1559)"| RR["RegisterResult"]
   end
 ```
@@ -180,7 +187,9 @@ flowchart TD
 ## Documentation
 
 - [Getting started tutorial](docs/guides/tutorial-first-attestation.md)
+- [Tutorial: Sign with a wallet signer](docs/guides/tutorial-wallet-signer.md)
 - [How to register and attest onchain](docs/guides/how-to-register-and-attest-onchain.md)
+- [How to build a wallet-based onchain attestation](docs/guides/how-to-wallet-onchain-attest.md)
 - [How to add a custom location type](docs/guides/how-to-add-custom-location-type.md)
 - [Environment configuration reference](docs/guides/reference-environment.md)
 - [API reference](docs/guides/reference-api.md)
