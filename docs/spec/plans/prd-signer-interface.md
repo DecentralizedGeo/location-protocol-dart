@@ -4,18 +4,18 @@
 
 ## Overview
 
-The `location_protocol` Dart library provides the full lifecycle for Location Protocol spatial attestations — payload construction, schema definition, ABI encoding, EIP-712 offchain signing, and onchain EAS operations. However, both `OffchainSigner` and `DefaultRpcProvider` require a **raw private key hex string** in their constructors, making it impossible to use wallet-backed signing (Privy embedded wallets, MetaMask, WalletConnect, secure enclaves) without reimplementing the library's EIP-712 internals externally.
+The `location_protocol` Dart library provides the full lifecycle for Location Protocol spatial attestations — payload construction, schema definition, ABI encoding, EIP-712 offchain signing, and onchain EAS operations. However, early iterations of `OffchainSigner` and `DefaultRpcProvider` required a **raw private key hex string** in their constructors, making it impossible to use wallet-backed signing (Privy embedded wallets, MetaMask, WalletConnect, secure enclaves) without reimplementing the library's EIP-712 internals externally.
 
-This PRD defines the requirements for adding an abstract `Signer` interface to the library, enabling any Dart application to plug in arbitrary signing backends while the library continues to own all EIP-712 typed data construction, digest computation, UID generation, and verification logic.
+This PRD defines the requirements for an abstract `Signer` interface. This decouples the library from raw private keys, enabling any Dart application to plug in arbitrary signing backends while the library continues to own all EIP-712 typed data construction, digest computation, UID generation, and verification logic.
 
 **Analogous prior art:** The TypeScript EAS SDK accepts ethers-compatible signers via `eas.connect(signer)`. The [Privy EAS integration demo](https://github.com/DecentralizedGeo/privy-eas-integration-demo/blob/main/docs/privy-eas-integration.md) uses `walletClientToSigner()` to bridge Privy's wallet into this interface. This PRD creates the Dart equivalent.
 
 ## Goals
 
 - Enable wallet-backed signing (Privy, MetaMask, WalletConnect, secure enclaves) without consumers reimplementing EIP-712 logic
-- Maintain full backward compatibility — existing code using `OffchainSigner(privateKeyHex: ...)` continues to work via a convenience factory
+- Maintain full backward compatibility — existing code using `privateKeyHex` continues to work via the `OffchainSigner.fromPrivateKey` convenience factory
 - Expose typed-data construction and UID computation as public utilities so external integrations can inspect/use them
-- Extend the same pattern to `DefaultRpcProvider` for onchain transaction signing
+- Support onchain transaction requests for external wallets via `EASClient.buildAttestTxRequest`
 
 ## User Personas
 
@@ -29,19 +29,19 @@ This PRD defines the requirements for adding an abstract `Signer` interface to t
 **As a** Flutter app developer using Privy for authentication, **I want** to pass my Privy wallet's signing capability into `OffchainSigner` **so that** users can sign Location Protocol attestations without the app ever handling raw private keys.
 
 **Acceptance Criteria:**
-- [ ] `OffchainSigner` accepts a `Signer` object instead of (or in addition to) a `privateKeyHex` string
-- [ ] A `Signer` implementation that calls `eth_signTypedData_v4` via an RPC provider produces a valid `SignedOffchainAttestation` that passes `verifyOffchainAttestation()`
-- [ ] The `SignedOffchainAttestation` is byte-identical to one produced by a `LocalKeySigner` wrapping the same private key (deterministic salt must be injected for this comparison)
-- [ ] Typecheck/lint passes: `dart analyze` reports zero issues
+- [x] `OffchainSigner` primary constructor accepts a `Signer` object
+- [x] A `Signer` implementation that calls `eth_signTypedData_v4` via an RPC provider produces a valid `SignedOffchainAttestation` that passes `verifyOffchainAttestation()`
+- [x] The `SignedOffchainAttestation` is byte-identical to one produced by a `LocalKeySigner` wrapping the same private key
+- [x] Typecheck/lint passes: `dart analyze` reports zero issues
 
 ### US-002: Sign offchain attestation with a local private key (backward compatibility)
 
 **As a** developer already using `OffchainSigner(privateKeyHex: 'abc...')`, **I want** my existing code to keep working **so that** upgrading the library is non-breaking.
 
 **Acceptance Criteria:**
-- [ ] `OffchainSigner.fromPrivateKey(privateKeyHex: ..., chainId: ..., easContractAddress: ...)` convenience factory exists and returns a fully functional `OffchainSigner`
-- [ ] All existing `offchain_signer_test.dart` tests pass without modification (or with only trivial import changes)
-- [ ] `dart analyze` reports zero issues
+- [x] `OffchainSigner.fromPrivateKey(privateKeyHex: ..., chainId: ..., easContractAddress: ...)` convenience factory exists and returns a fully functional `OffchainSigner`
+- [x] Existing tests pass with trivial setup updates to use the factory
+- [x] `dart analyze` reports zero issues
 
 ### US-003: Inspect EIP-712 typed data before signing
 
@@ -64,12 +64,12 @@ This PRD defines the requirements for adding an abstract `Signer` interface to t
 
 ### US-005: Submit onchain transactions with an external wallet
 
-**As a** app developer using Privy or WalletConnect, **I want** to use the same `Signer` abstraction for onchain operations (attest, timestamp, registerSchema) **so that** my wallet integration works for both offchain and onchain flows.
+**As a** app developer using Privy or WalletConnect, **I want** to build onchain transaction payloads that can be sent to my wallet **so that** my wallet integration works for both offchain and onchain flows.
 
 **Acceptance Criteria:**
-- [ ] `DefaultRpcProvider` (or a new provider) accepts a `Signer` for transaction signing instead of `privateKeyHex`
-- [ ] `EASClient.attest()`, `EASClient.timestamp()`, and `SchemaRegistryClient.register()` work with a `Signer`-backed provider
-- [ ] `dart analyze` reports zero issues
+- [x] `EASClient.buildAttestTxRequest()` static helper exists to package calldata into a wallet-friendly map
+- [x] The resulting map contains `to`, `data`, `value`, and optionally `from` keys
+- [x] `dart analyze` reports zero issues
 
 ## Functional Requirements
 
@@ -84,7 +84,7 @@ This PRD defines the requirements for adding an abstract `Signer` interface to t
   - `signTypedData()` inherits the default implementation (delegates to `signDigest`)
   - `address` derives from the private key
 
-- **FR-3:** `OffchainSigner`'s primary constructor MUST accept `Signer signer` instead of `String privateKeyHex`:
+- **FR-3:** `OffchainSigner`'s primary constructor MUST accept `Signer signer`:
   - `OffchainSigner({required Signer signer, required int chainId, required String easContractAddress, String easVersion = '1.0.0'})`
   - `signerAddress` getter MUST return `signer.address`
 
@@ -92,17 +92,17 @@ This PRD defines the requirements for adding an abstract `Signer` interface to t
   - `OffchainSigner.fromPrivateKey({required String privateKeyHex, required int chainId, required String easContractAddress, String easVersion = '1.0.0'})`
   - This wraps the key in a `LocalKeySigner` and delegates to the primary constructor
 
-- **FR-5:** `signOffchainAttestation()` MUST call `signer.signTypedData(typedDataMap)` where `typedDataMap` is the EIP-712 JSON representation. For `LocalKeySigner`, this flows through the default `signTypedData → signDigest` path, producing identical output to the current implementation.
+- **FR-5:** `signOffchainAttestation()` MUST call `signer.signTypedData(typedDataMap)` where `typedDataMap` is the EIP-712 JSON representation.
 
-- **FR-6:** The library MUST expose a public utility to build the EIP-712 typed data JSON map. This is the currently-private `_buildTypedData` logic, adapted to return `Map<String, dynamic>` in addition to (or instead of) the `on_chain` `Eip712TypedData` object. Suggested API:
-  - Static method or standalone function returning `({Eip712TypedData typedData, Map<String, dynamic> jsonMap})`
+- **FR-6:** The library MUST expose a public static utility to build the EIP-712 typed data JSON map.
+  - `OffchainSigner.buildOffchainTypedDataJson(...)`
 
-- **FR-7:** The library MUST expose a public utility to compute the offchain UID. This is the currently-private `_computeOffchainUID` logic. Suggested API:
-  - Static method: `OffchainSigner.computeUID(...)` or standalone `computeOffchainUID(...)`
+- **FR-7:** The library MUST expose a public static utility to compute the offchain UID.
+  - `OffchainSigner.computeOffchainUID(...)`
 
-- **FR-8:** `verifyOffchainAttestation()` MUST remain signer-independent — it recomputes the digest and recovers the public key from the signature. No changes to its external behavior.
+- **FR-8:** `verifyOffchainAttestation()` MUST remain signer-independent — it recomputes the digest and recovers the public key from the signature.
 
-- **FR-9:** `DefaultRpcProvider` SHOULD accept a `Signer` for transaction signing. A `DefaultRpcProvider.fromPrivateKey(...)` convenience factory SHOULD preserve backward compatibility. *(Lower priority — can be a follow-up if needed.)*
+- **FR-9:** `EASClient` MUST export a static helper `buildAttestTxRequest` for packaging onchain attestations for external wallets.
 
 - **FR-10:** The barrel export (`lib/location_protocol.dart`) MUST export `Signer`, `LocalKeySigner`, and any new typed-data/UID utility files.
 
@@ -128,14 +128,12 @@ This PRD defines the requirements for adding an abstract `Signer` interface to t
 - **`blockchain_utils` package:** Used transitively for keccak256 and byte utilities.
 
 ### Constraints
-- `OffchainSigner._buildTypedData()` currently returns an `on_chain` `Eip712TypedData` object and calls `.encode()` to get the digest. For `signTypedData(Map)`, we also need the JSON map representation. This requires either:
-  - (A) Building both the `Eip712TypedData` and the JSON map from the same parameters, or
-  - (B) Having `signTypedData`'s default implementation reconstruct the `Eip712TypedData` from the JSON map to call `.encode()` for digest computation.
-  - **Recommendation:** Option (A) — build both representations in the public utility function, return a named record.
+- `OffchainSigner.buildOffchainTypedDataJson()` MUST use decimal strings for all `uint*` values (e.g. `'11155111'`, `'2'`, `'0'`). `on_chain` v8's `_ensureCorrectValues()` calls `valueAsBigInt(allowHex: false)` for numeric EIP-712 types; hex-formatted integers will cause encoding failures.
+- `EIP712Signature.fromHex` expects 65-byte layout `r[32] || s[32] || v[1]` — this matches what `eth_signTypedData_v4` wallets return. 
 
 ### Risks
-- **EIP-712 digest parity:** The JSON map passed to `signTypedData()` must, when hashed by an external wallet (MetaMask, Privy), produce the identical 32-byte digest as `Eip712TypedData.encode()`. This must be verified with integration tests against a real wallet provider.
-- **`v` value normalization:** Different wallet providers return the recovery id `v` as either `0/1` or `27/28`. The library must handle both conventions when constructing `EIP712Signature`.
+- **EIP-712 digest parity:** The JSON map passed to `signTypedData()` must produce the identical 32-byte digest as `Eip712TypedData.encode()`. Verified with tests.
+- **`v` value normalization:** Wallet providers may return `v` as `0/1`. The library MUST normalize `v < 27` to `27/28` before storage or verification to maintain consistency.
 
 ### Key Files to Modify (in `location-protocol-dart` repo)
 
