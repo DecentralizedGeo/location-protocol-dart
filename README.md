@@ -1,13 +1,25 @@
-# location_protocol
-
 [![pub.dev](https://img.shields.io/pub/v/location_protocol.svg)](https://pub.dev/packages/location_protocol)
 [![Dart SDK](https://img.shields.io/badge/Dart-%E2%89%A53.11-blue)](https://dart.dev)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![CI](https://img.shields.io/badge/CI-passing-brightgreen)](https://github.com/DecentralizedGeo/location-protocol-dart/actions)
 
 > Dart library for building cryptographically verifiable, Location Protocol compliant records on top of your own data model.
 
 ---
+
+## Contents
+
+- [Description](#description)
+- [Library targets](#library-targets)
+- [Features](#features)
+- [How It Works](#how-it-works)
+- [Supported Chains](#supported-chains)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [Documentation](#documentation)
+- [Help & Contributing](#help--contributing)
+- [License](#license)
 
 ## Description
 
@@ -18,6 +30,19 @@ In this reference implementation, LP payloads are embedded in [EAS (Ethereum Att
 The library supports both offchain ([EIP‑712](https://eips.ethereum.org/EIPS/eip-712), no gas) and onchain ([EIP‑1559](https://eips.ethereum.org/EIPS/eip-1559)) attestations, giving you a flexible spectrum from fully local signatures to immutably anchored on‑chain records.
 
 This library provides the Dart equivalent of the signature service layer in the [Astral SDK](https://github.com/DecentralizedGeo/astral-sdk), adapted for mobile and multi‑platform Dart deployments. Pure Dart — no Flutter dependency; works in CLI, servers, Flutter apps, and all major compilation targets (web via JS/Wasm, Android, iOS, macOS, Windows, Linux).
+
+---
+
+## Library targets
+
+This library is built with **Pure Dart** (no Flutter dependency). It is tested across all major compilation targets:
+
+| Target | Status | Note |
+| --- | --- | --- |
+| **Android / iOS** | ✅ | Works in Flutter apps and CLI |
+| **Windows / macOS / Linux** | ✅ | Native desktop and server-side |
+| **Web (JS / Wasm)** | ✅ | Browser-compatible (via `blockchain_utils`) |
+| **Server / CLI** | ✅ | Works in any Dart runtime |
 
 ---
 
@@ -65,7 +90,7 @@ Offchain attestations are [EIP-712](https://eips.ethereum.org/EIPS/eip-712) sign
 
 ## Supported Chains
 
-21 networks are supported out of the box — 14 mainnets and 7 testnets. See the full list with chain IDs and contract addresses in the [Environment configuration reference](docs/guides/reference-environment.md#chain-selection).
+21 networks are supported out of the box — 14 mainnets and 7 testnets. See the full list with chain IDs and contract addresses in the [Environment configuration reference](doc/guides/reference-environment.md#chain-selection).
 
 Addresses are sourced from `ChainConfig` and match the [official EAS deployment registry](https://github.com/ethereum-attestation-service/eas-contracts/).
 
@@ -87,6 +112,8 @@ dart pub get
 ---
 
 ## Quick Start
+
+See the [example/main.dart](example/main.dart) for a complete, runnable demonstration.
 
 > **Security:** Never hard-code a real private key. Use environment variables or a secrets manager in production. See [Environment configuration](docs/guides/reference-environment.md).
 
@@ -196,14 +223,22 @@ flowchart TD
 
 ## Documentation
 
-- [Getting started tutorial](docs/guides/tutorial-first-attestation.md)
-- [Tutorial: Sign with a wallet signer](docs/guides/tutorial-wallet-signer.md)
-- [How to register and attest onchain](docs/guides/how-to-register-and-attest-onchain.md)
-- [How to build a wallet-based onchain transaction](docs/guides/how-to-wallet-onchain-transactions.md)
-- [How to add a custom location type](docs/guides/how-to-add-custom-location-type.md)
-- [Environment configuration reference](docs/guides/reference-environment.md)
-- [API reference](docs/guides/reference-api.md)
-- [Concepts and design](docs/guides/explanation-concepts.md)
+- [Getting started tutorial](doc/guides/tutorial-first-attestation.md)
+- [Tutorial: Sign with a wallet signer](doc/guides/tutorial-wallet-signer.md)
+- [How to register and attest onchain](doc/guides/how-to-register-and-attest-onchain.md)
+- [How to build a wallet-based onchain transaction](doc/guides/how-to-wallet-onchain-transactions.md)
+- [How to add a custom location type](doc/guides/how-to-add-custom-location-type.md)
+- [Environment configuration reference](doc/guides/reference-environment.md)
+- [API reference](doc/guides/reference-api.md)
+- [Concepts and design](doc/guides/explanation-concepts.md)
+
+---
+
+## Help & Contributing
+
+- **Found a bug?** Open an [issue](https://github.com/DecentralizedGeo/location-protocol-dart/issues).
+- **Want to contribute?** See [CONTRIBUTING.md](CONTRIBUTING.md).
+- **Need help?** Check the [Documentation](#documentation) or start a discussion in the repository.
 
 ---
 
