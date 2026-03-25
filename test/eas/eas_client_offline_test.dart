@@ -220,6 +220,8 @@ void main() {
           TransactionLog(
             address: easAddress,
             topics: [EASConstants.attestedEventTopic],
+            // Simulates ABI-encoded event data containing the UID followed by
+            // another 32-byte word. The parser should recover only the UID.
             data:
                 '${_expectedUid}ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
           ),

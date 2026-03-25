@@ -25,6 +25,8 @@ import 'schema_registry.dart';
 /// - [timestamp]: Timestamp an offchain attestation UID onchain
 /// - [registerSchema]: Register a schema (delegates to [SchemaRegistryClient])
 class EASClient {
+  static const int _bytes32HexLength = 66;
+
   final RpcProvider provider;
   final String? _easAddress;
 
@@ -110,8 +112,10 @@ class EASClient {
       if (log.topics.isNotEmpty &&
           log.topics[0] == EASConstants.attestedEventTopic &&
           log.address.toLowerCase() == lowerAddress) {
-        if (log.data.startsWith('0x') && log.data.length >= 66) {
-          return log.data.substring(0, 66);
+        if (log.data.startsWith('0x') && log.data.length >= _bytes32HexLength) {
+          // Event data may be longer than a single word when ABI-encoded; the
+          // attestation UID is the first bytes32 in the payload.
+          return log.data.substring(0, _bytes32HexLength);
         }
 
         throw StateError(
