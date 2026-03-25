@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:test/test.dart';
 import 'package:location_protocol/src/rpc/transaction_receipt.dart';
 import 'fake_rpc_provider.dart';
@@ -32,6 +34,34 @@ void main() {
       expect(receipt.blockNumber, equals(42));
       expect(receipt.logs, hasLength(1));
       expect(receipt.logs.first.address, equals('0xContractAddr'));
+    });
+
+    test('throws TimeoutException for configured pending transaction', () {
+      final provider = FakeRpcProvider();
+      provider.timeoutTxHashes.add('0xpending');
+
+      expect(
+        () => provider.waitForReceipt(
+          '0xpending',
+          timeout: const Duration(seconds: 3),
+        ),
+        throwsA(isA<TimeoutException>()),
+      );
+    });
+
+    test('throws StateError for reverted mocked receipt', () {
+      final provider = FakeRpcProvider();
+      provider.receiptMocks['0xreverted'] = const TransactionReceipt(
+        txHash: '0xreverted',
+        blockNumber: 7,
+        status: false,
+        logs: [],
+      );
+
+      expect(
+        () => provider.waitForReceipt('0xreverted'),
+        throwsStateError,
+      );
     });
   });
 }

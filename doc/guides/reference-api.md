@@ -40,7 +40,9 @@ classDiagram
     }
     class EASClient {
         +attest() AttestResult
+        +waitForAttestation() String
         +timestamp() TimestampResult
+        +getAttestation() Attestation?
     }
     class TxUtils {
         <<static>>
@@ -390,6 +392,7 @@ If `easAddress` is omitted, the address is resolved from `ChainConfig` using `pr
 | Method | Parameters | Returns | Description |
 |---|---|---|---|
 | `attest({...})` | `required schema: SchemaDefinition`, `required lpPayload: LPPayload`, `required userData: Map<String, dynamic>`, `recipient: String = zeroAddress`, `expirationTime: BigInt?`, `refUID: String?` | `Future<AttestResult>` | Submits an onchain attestation. Requires the schema to already be registered |
+| `waitForAttestation(String txHash, {Duration? timeout, Duration pollInterval = const Duration(seconds: 4)})` | `txHash: String`, `timeout: Duration?`, `pollInterval: Duration` | `Future<String>` | Polls for a submitted attestation transaction and returns the UID emitted by the `Attested` event |
 | `timestamp(String offchainUID)` | `offchainUID: String` | `Future<TimestampResult>` | Timestamps an offchain attestation UID onchain for proof of existence |
 | `getAttestation(String uid)` | `uid: String` | `Future<Attestation?>` | Fetches an onchain attestation by UID. Returns `null` if not found |
 | `registerSchema(SchemaDefinition schema)` | `schema: SchemaDefinition` | `Future<RegisterResult>` | Convenience wrapper around `SchemaRegistryClient.register()` |
