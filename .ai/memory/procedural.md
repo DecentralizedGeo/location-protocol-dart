@@ -63,7 +63,7 @@
 
 ### Phase 7 Documentation Snippet Validation Patterns
 - **Doc snippet extraction must normalize line endings**: Use `trim()` for fence matching so CRLF markdown fences are detected on Windows.
-- **Derived test artifacts are executable contracts**: Treat `test/docs/docs_snippets_test.dart` as generated output only; regenerate from docs and validate with analyzer/tests instead of manual edits.
+- **Derived test artifacts are executable contracts**: Treat `test/doc/docs_snippets_test.dart` as generated output only; regenerate from docs and validate with analyzer/tests instead of manual edits.
 - **Runtime-safe snippet adaptation**: If docs include harness-only APIs like `tearDown(...)` in snippet prose, transform to runtime-safe equivalents when generating executable tests.
 - **Network flake policy for generated docs**: For Sepolia-tagged generated tests, use explicit env skip guards and handle mempool duplicate transaction errors (`already known`) by marking tests skipped rather than failing unrelated documentation validation.
 - **Idempotency gate**: Run generator twice and compare file hashes to ensure deterministic output before phase closeout.

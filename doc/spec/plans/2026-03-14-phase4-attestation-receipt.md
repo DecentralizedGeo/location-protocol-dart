@@ -1519,7 +1519,7 @@ Update procedural.md with:
 - [ ] **Step 6: Final commit**
 
 ```bash
-git add docs/walkthrough.md .ai/memory/
+git add doc/walkthrough.md .ai/memory/
 git commit -m "docs: Phase 4 walkthrough + memory consolidation"
 ```
 

@@ -15,8 +15,8 @@ You are a **Senior Software Engineer** in **EXECUTION mode**. Your goal is to tr
 **Scope**: [MODULE_OR_PACKAGE_PATH]
 
 ### Required Documents
-- **Implementation Plan**: [`docs/spec/plans/YYYY-MM-DD_[PHASE_NUMBER]-[PHASE_NAME].md`](./docs/spec/plans/YYYY-MM-DD_[PHASE_NUMBER]-[PHASE_NAME].md)
-- **Project Requirements Document**: [`docs/spec/plans/[PRD].md`](./docs/spec/plans/[PRD].md)
+- **Implementation Plan**: [`doc/spec/plans/YYYY-MM-DD_[PHASE_NUMBER]-[PHASE_NAME].md`](./doc/spec/plans/YYYY-MM-DD_[PHASE_NUMBER]-[PHASE_NAME].md)
+- **Project Requirements Document**: [`doc/spec/plans/[PRD].md`](./doc/spec/plans/[PRD].md)
 
 ---
 
@@ -57,7 +57,7 @@ Once all phases of the plan are complete:
 
 ### Initialization Instructions for the Agent:
 1.  Review `AGENTS.md`.
-2.  Locate the implementation plan at `docs/plans/`.
+2.  Locate the implementation plan at `doc/plans/`.
 3.  **Acknowledge**: Respond with "I'm using the executing-plans skill to implement the [PHASE_NAME]" and present your initial review of the first 3 tasks.
 
 ---

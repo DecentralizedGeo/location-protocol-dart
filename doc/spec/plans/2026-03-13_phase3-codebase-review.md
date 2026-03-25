@@ -792,4 +792,4 @@ Run the superpower skill for `agent-memory`.
 Document the transition towards highly readable, interface-driven `RpcProvider`, the consolidation of boilerplate via `<String>.toBytes()`, and `ByteUtils`.
 
 **Step 4: Create Walkthrough**
-Create a `docs/walkthrough.md` visually documenting the structural clarity gained in Phase 3.
+Create a `doc/walkthrough.md` visually documenting the structural clarity gained in Phase 3.

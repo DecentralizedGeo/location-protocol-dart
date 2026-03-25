@@ -95,7 +95,7 @@ class ChainAddresses {
 
 /// Known EAS contract addresses per chain.
 ///
-/// Reference: [EAS Deployments](https://docs.attest.org/docs/quick--start/contracts)
+/// Reference: [EAS Deployments](https://docs.attest.org/doc/quick--start/contracts)
 class ChainConfig {
   static const Map<int, ChainAddresses> _chains = {
     // Ethereum Mainnet

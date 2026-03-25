@@ -1,7 +1,7 @@
 # `EASClient.attest()` + `EASClient.timestamp()` + `SchemaRegistryClient.register()` — Rich Return Types PRD
 
 > **Repo:** `DecentralizedGeo/location-protocol-dart`
-> **Issue Ref:** `docs/spec/issues/2026-03-13_attest-return-uid-from-receipt.md`
+> **Issue Ref:** `doc/spec/issues/2026-03-13_attest-return-uid-from-receipt.md`
 > **Date:** 2026-03-14
 > **Priority:** High
 > **Area:** `lib/src/eas/`, `lib/src/rpc/`, `lib/src/models/`

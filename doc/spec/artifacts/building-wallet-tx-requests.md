@@ -113,7 +113,7 @@ Notes:
 
 - `callData` is the raw bytes returned by `buildAttestCallData(...)`.
 - `BytesUtils.toHexString(callData)` is already used in `DefaultRpcProvider` to serialize transactions, so we reuse that utility.
-- `value` defaults to `0x0`, which matches typical EAS usage where no ETH is attached. [docs.attest](https://docs.attest.org/docs/tutorials/make-an-attestation)
+- `value` defaults to `0x0`, which matches typical EAS usage where no ETH is attached. [docs.attest](https://docs.attest.org/doc/tutorials/make-an-attestation)
 
 ***
 

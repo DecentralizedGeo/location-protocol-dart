@@ -23,7 +23,7 @@
 **Recurring test flow files**
 - Modify: `test/integration/sepolia_onchain_test.dart`
 - Modify: `.env.example`
-- Modify: `docs/walkthrough.md`
+- Modify: `doc/walkthrough.md`
 
 **One-time bootstrap flow files**
 - Create: `test/integration/sepolia_schema_bootstrap_test.dart`
@@ -127,11 +127,11 @@
 
 **Files:**
 - Modify: `.env.example`
-- Modify: `docs/walkthrough.md`
+- Modify: `doc/walkthrough.md`
 - Modify (optional): `dart_test.yaml`
 
 - [ ] Document `SEPOLIA_EXISTING_SCHEMA_UID` in `.env.example` and setup steps.
-- [ ] In `docs/walkthrough.md`, add short “Sepolia Fixed Schema Workflow” section:
+- [ ] In `doc/walkthrough.md`, add short “Sepolia Fixed Schema Workflow” section:
   - one-time bootstrap command
   - where to store UID
   - recurring `sepolia` test command

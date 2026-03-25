@@ -8,7 +8,7 @@ The `location_protocol` Dart library provides the full lifecycle for Location Pr
 
 This PRD defines the requirements for an abstract `Signer` interface. This decouples the library from raw private keys, enabling any Dart application to plug in arbitrary signing backends while the library continues to own all EIP-712 typed data construction, digest computation, UID generation, and verification logic.
 
-**Analogous prior art:** The TypeScript EAS SDK accepts ethers-compatible signers via `eas.connect(signer)`. The [Privy EAS integration demo](https://github.com/DecentralizedGeo/privy-eas-integration-demo/blob/main/docs/privy-eas-integration.md) uses `walletClientToSigner()` to bridge Privy's wallet into this interface. This PRD creates the Dart equivalent.
+**Analogous prior art:** The TypeScript EAS SDK accepts ethers-compatible signers via `eas.connect(signer)`. The [Privy EAS integration demo](https://github.com/DecentralizedGeo/privy-eas-integration-demo/blob/main/doc/privy-eas-integration.md) uses `walletClientToSigner()` to bridge Privy's wallet into this interface. This PRD creates the Dart equivalent.
 
 ## Goals
 

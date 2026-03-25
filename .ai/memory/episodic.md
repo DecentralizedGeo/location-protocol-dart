@@ -55,7 +55,7 @@
 - **Design Decision**: Option A approved — built-in `dart:io` `HttpClient` wrapping `EthereumServiceProvider` mixin. User passes RPC URL + API token. Zero new dependencies.
 - **Critical Bug Caught**: Self-review discovered that manual `keccak256(serialized)` + `sign(hash, hashMessage: false)` would double-hash. `on_chain`'s own `ETHTransactionBuilder.sign()` passes raw serialized bytes with `hashMessage: true` (default). Plan rewritten to use `ETHTransactionBuilder.autoFill()` → `.sign()` → `.sendTransaction()`.
 - **Env Strategy**: User prefers `.env` + `.env.example` files (Astral SDK pattern) over bash-exported environment variables for Sepolia integration tests.
-- **Artifacts**: `docs/spec/plans/2026-03-13_phase2-onchain-operations.md` (10 tasks, 14 files)
+- **Artifacts**: `doc/spec/plans/2026-03-13_phase2-onchain-operations.md` (10 tasks, 14 files)
 
 ### [ID: PHASE2_BATCH1_EXEC] -> Follows [PHASE2_ONCHAIN_PLAN]
 - **Date**: 2026-03-13
@@ -90,7 +90,7 @@
 - **Design Decision**: Option A (DRY Refactoring) and Option B (Architectural Expansion). Clients will now require an `RpcProvider` interface via DI, removing raw `rpcUrl`/`privateKey` from their constructors (matching the "Astral" pattern). Tuple decoding moved to domain model factories (`Attestation.fromTuple`).
 - **Technical Pivot**: Confirmed `OffchainSigner` intentionally does *not* take the new `RpcProvider`, as it is strictly for local cryptography, maintaining a clean boundary between transport and cryptography.
 - **Key Insight**: Discovered `AbiEncoder` blindly trusts user-provided string inputs for `bytes/bytes32` schema fields. Added a requirement to use `HexUtils(.toBytes())` to intercept and safely convert these before handing them to `on_chain`'s tuple coder. Checked changelogs for `on_chain` v8 and `blockchain_utils` v6; confirmed the plan is 100% forward-compatible and inherits constant-time crypto safety automatically.
-- **Artifacts**: `docs/spec/plans/2026-03-13_phase3-codebase-review.md` (8 tasks)
+- **Artifacts**: `doc/spec/plans/2026-03-13_phase3-codebase-review.md` (8 tasks)
 
 ### [ID: PHASE3_CODEBASE_REVIEW_EXEC] -> Follows [PHASE3_CODEBASE_REVIEW_PLAN]
 - **Date**: 2026-03-14
@@ -127,7 +127,7 @@
 - **Date**: 2026-03-16
 - **Event**: Implementation of Phase 7 (Documentation Snippet Extraction & Validation)
 - **Status**: COMPLETED
-- **Context**: Added `scripts/docs_snippet_extractor.dart` to scan docs, extract fenced Dart snippets, classify step/error/standalone blocks, and generate `test/docs/docs_snippets_test.dart` as a derived artifact with `@Tags(['doc-snippets'])`.
+- **Context**: Added `scripts/docs_snippet_extractor.dart` to scan docs, extract fenced Dart snippets, classify step/error/standalone blocks, and generate `test/doc/docs_snippets_test.dart` as a derived artifact with `@Tags(['doc-snippets'])`.
 - **Key Findings**:
 	- Fixed CRLF fence parsing to avoid missing snippets in Windows-authored markdown files.
 	- Added generation-time normalization for utility snippets that call `tearDown(...)` so they execute safely in runtime tests.

@@ -47,7 +47,7 @@
 
 ## Locked Decisions
 
-- PRD source: `docs/spec/plans/location-type-structural-validation_prd.md`.
+- PRD source: `doc/spec/plans/location-type-structural-validation_prd.md`.
 - Task order: build validator in isolation → migrate fixtures → wire into `LPPayload` → deep checks. This prevents cascade breakage.
 - Built-in types cannot be overridden via `register()`.
 - Duplicate custom registration replaces the prior validator (last-write-wins).
@@ -71,7 +71,7 @@
 | Modify | `pubspec.yaml` | Add `geobase` dependency (Phase 6B) |
 | Modify | `.ai/memory/semantic.md` | Record learnings |
 | Modify | `.ai/memory/procedural.md` | Record patterns |
-| Modify | `docs/walkthrough.md` | Document validation behavior |
+| Modify | `doc/walkthrough.md` | Document validation behavior |
 
 ---
 
@@ -2170,7 +2170,7 @@ git commit -m "docs(memory): record phase 6 procedural patterns"
 ### Task 6E.3: Update walkthrough
 
 **Files:**
-- Modify: `docs/walkthrough.md`
+- Modify: `doc/walkthrough.md`
 
 - [ ] **Step 1: Add validation section to walkthrough**
 
@@ -2225,7 +2225,7 @@ This flag is a migration aid and will be removed in a future version.
 - [ ] **Step 2: Commit**
 
 ```powershell
-git add docs/walkthrough.md
+git add doc/walkthrough.md
 git commit -m "docs: add location type validation walkthrough"
 ```
 

@@ -8,9 +8,9 @@
 
 **Tech Stack:** Dart 3.11+, `on_chain` ^8.0.0 (`Eip712TypedData`, `ETHPrivateKey`), `blockchain_utils` ^6.0.0 (keccak256, `BytesUtils`)
 
-**PRD:** `docs/spec/plans/prd-signer-interface.md`
-**Research Report:** `docs/spec/artifacts/signer-interface-report.md`
-**Wallet Tx Request Spec:** `docs/spec/artifacts/building-wallet-tx-requests.md`
+**PRD:** `doc/spec/plans/prd-signer-interface.md`
+**Research Report:** `doc/spec/artifacts/signer-interface-report.md`
+**Wallet Tx Request Spec:** `doc/spec/artifacts/building-wallet-tx-requests.md`
 
 ---
 
@@ -559,7 +559,7 @@ Task 7: buildAttestTxRequest ─────── (independent)
 - Modify: `lib/src/eas/onchain_client.dart`
 - Modify: `test/eas/onchain_client_test.dart`
 
-**Context:** Per `docs/spec/artifacts/building-wallet-tx-requests.md`, provide a static helper that wraps ABI-encoded calldata into a standard Ethereum transaction request map `{to, data, value, from?}`. This enables wallet-backed onchain attestations without any `DefaultRpcProvider` changes. The map is JSON-serializable and can be passed to any wallet SDK implementing `eth_sendTransaction`.
+**Context:** Per `doc/spec/artifacts/building-wallet-tx-requests.md`, provide a static helper that wraps ABI-encoded calldata into a standard Ethereum transaction request map `{to, data, value, from?}`. This enables wallet-backed onchain attestations without any `DefaultRpcProvider` changes. The map is JSON-serializable and can be passed to any wallet SDK implementing `eth_sendTransaction`.
 
 - [ ] **Step 1: Write failing test — builds correct transaction request map**
 
@@ -678,8 +678,8 @@ Task 7: buildAttestTxRequest ─────── (independent)
 ### Task 9: Documentation Updates
 
 **Files:**
-- Modify: `docs/guides/reference-api.md`
-- Modify: `docs/guides/tutorial-first-attestation.md`
+- Modify: `doc/guides/reference-api.md`
+- Modify: `doc/guides/tutorial-first-attestation.md`
 
 - [ ] **Step 1: Update reference-api.md**
 
@@ -701,15 +701,15 @@ Task 7: buildAttestTxRequest ─────── (independent)
 - [ ] **Step 3: Regenerate doc snippets**
 
   Run: `dart run scripts/docs_snippet_extractor.dart`
-  Run: `dart test test/docs/docs_snippets_test.dart --tags doc-snippets -r expanded`
+  Run: `dart test test/doc/docs_snippets_test.dart --tags doc-snippets -r expanded`
 
   Expected: Generated tests pass or have known Sepolia-skip guards.
 
 - [ ] **Step 4: Commit**
 
   ```bash
-  git add docs/guides/reference-api.md docs/guides/tutorial-first-attestation.md
-  git add test/docs/docs_snippets_test.dart
+  git add doc/guides/reference-api.md doc/guides/tutorial-first-attestation.md
+  git add test/doc/docs_snippets_test.dart
   git commit -m "docs: update API reference and tutorial for Signer interface"
   ```
 
@@ -773,7 +773,7 @@ Task 7: buildAttestTxRequest ─────── (independent)
 
 - [ ] **Step 7: Generate walkthrough**
 
-  Create or update `docs/spec/walkthrough.md` with Phase 8 results:
+  Create or update `doc/spec/walkthrough.md` with Phase 8 results:
   - What was built: Signer interface, LocalKeySigner, OffchainSigner refactor, public utilities, buildAttestTxRequest.
   - API surface: new classes, methods, factories.
   - Test count: before vs after.
@@ -782,7 +782,7 @@ Task 7: buildAttestTxRequest ─────── (independent)
 - [ ] **Step 8: Final commit**
 
   ```bash
-  git add .ai/memory/ docs/spec/walkthrough.md
+  git add .ai/memory/ doc/spec/walkthrough.md
   git commit -m "docs: Phase 8 verification, memory consolidation, walkthrough"
   ```
 

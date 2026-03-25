@@ -4,7 +4,7 @@
 
 **Goal:** Create an automated Dart script that extracts all `dart` code snippets from documentation markdown files and generates a test file that validates every snippet compiles and runs without error.
 
-**Architecture:** A single Dart script (`scripts/docs_snippet_extractor.dart`) scans `README.md` and `docs/guides/*.md`, extracts fenced `dart` code blocks with source metadata, auto-detects tutorial step sequences by heading pattern, and generates `test/docs/docs_snippets_test.dart`. Tutorial step fragments are reconstructed by accumulating prior steps into each successive test. Onchain snippets use `.env` loading with skip logic. The generated test file is a derived artifact — never edited manually.
+**Architecture:** A single Dart script (`scripts/docs_snippet_extractor.dart`) scans `README.md` and `doc/guides/*.md`, extracts fenced `dart` code blocks with source metadata, auto-detects tutorial step sequences by heading pattern, and generates `test/doc/docs_snippets_test.dart`. Tutorial step fragments are reconstructed by accumulating prior steps into each successive test. Onchain snippets use `.env` loading with skip logic. The generated test file is a derived artifact — never edited manually.
 
 **Tech Stack:** Dart 3.11+, `dart:io` for file I/O, `test` package, existing `location_protocol` barrel import, existing `test/test_helpers/dotenv_loader.dart` for `.env` loading.
 
@@ -29,7 +29,7 @@
 ## Scope and Non-Goals
 
 **In scope:**
-- Extract all `` ```dart `` fenced code blocks from `README.md` and `docs/guides/*.md`.
+- Extract all `` ```dart `` fenced code blocks from `README.md` and `doc/guides/*.md`.
 - Auto-detect step sequences by `## Step N` heading pattern.
 - Reconstruct tutorial steps by accumulating prior step code into each test.
 - Substitute placeholder private keys (`'YOUR_PRIVATE_KEY_HEX'`) with a well-known test key.
@@ -52,7 +52,7 @@
 
 ## Locked Decisions
 
-- **Generated file is derived.** `test/docs/docs_snippets_test.dart` is auto-generated; its header warns against manual edits. The documentation markdown is the source of truth.
+- **Generated file is derived.** `test/doc/docs_snippets_test.dart` is auto-generated; its header warns against manual edits. The documentation markdown is the source of truth.
 - **Blockquote code blocks are skipped.** Code fences inside `> ` blockquotes (e.g., the `alreadyExisted` branch example in the onchain guide) are V1 non-goals. They are supplementary; testing primary step code is sufficient.
 - **Error-demonstrating snippets generate `expect(throwsA(...))` tests.** Snippets under headings containing "Constraints" or with `// Throws:` comments are negative examples. The generator wraps them in `expect(() => ..., throwsA(isA<ArgumentError>()))`.
 - **Onchain snippets adapt `.env` loading.** Doc snippets use `Platform.environment` for credentials; generated tests use `loadDotEnv()` and `markTestSkipped()` to match the project's existing test patterns. Core API calls remain verbatim.
@@ -71,7 +71,7 @@ This is the authoritative catalog of Dart code blocks to extract and test. Line 
 |----|------|---------|------|------|-------|
 | R1 | ~81 | Quick Start | Complete (`main()`) | No | Placeholder key `'YOUR_PRIVATE_KEY_HEX'` — substitute. Commented-out onchain section — strip. |
 
-### docs/guides/tutorial-first-attestation.md
+### doc/guides/tutorial-first-attestation.md
 
 | ID | Line | Heading | Type | RPC? | Notes |
 |----|------|---------|------|------|-------|
@@ -82,7 +82,7 @@ This is the authoritative catalog of Dart code blocks to extract and test. Line 
 | T5 | ~155 | Step 5 — Inspect the signed attestation | Step fragment | No | Adds `print()` calls for signed fields |
 | T6 | ~175 | Complete program listing | Complete (`main()`) | No | Self-contained; tests independently |
 
-### docs/guides/how-to-register-and-attest-onchain.md
+### doc/guides/how-to-register-and-attest-onchain.md
 
 | ID | Line | Heading | Type | RPC? | Notes |
 |----|------|---------|------|------|-------|
@@ -93,7 +93,7 @@ This is the authoritative catalog of Dart code blocks to extract and test. Line 
 
 **Blockquote snippet (SKIPPED):** The `alreadyExisted` branch inline example (~line 82) is inside a `>` blockquote and excluded from V1.
 
-### docs/guides/how-to-add-custom-location-type.md
+### doc/guides/how-to-add-custom-location-type.md
 
 | ID | Line | Heading | Type | RPC? | Notes |
 |----|------|---------|------|------|-------|
@@ -102,11 +102,11 @@ This is the authoritative catalog of Dart code blocks to extract and test. Line 
 | C3 | ~43 | Constraints — built-in override throws | Error example | No | **Negative test** — wrap in `expect(throwsA(...))` |
 | C4 | ~52 | Constraints — `resetCustomTypes()` for tests | Utility fragment | No | `tearDown` pattern — informational only, generate as standalone |
 
-### docs/guides/reference-environment.md
+### doc/guides/reference-environment.md
 
 No `` ```dart `` code blocks. Only `dotenv` and `sh` blocks. **Nothing to extract.**
 
-### docs/guides/reference-api.md, explanation-concepts.md
+### doc/guides/reference-api.md, explanation-concepts.md
 
 No `` ```dart `` code blocks. Only Mermaid diagrams and tables. **Nothing to extract.**
 
@@ -175,7 +175,7 @@ All tagged `['sepolia']`. All skip gracefully if `.env` missing.
 | Action | Path | Responsibility |
 |--------|------|----------------|
 | Create | `scripts/docs_snippet_extractor.dart` | Main extraction & generation script |
-| Create | `test/docs/docs_snippets_test.dart` | Auto-generated test file (DO NOT EDIT) |
+| Create | `test/doc/docs_snippets_test.dart` | Auto-generated test file (DO NOT EDIT) |
 | Modify | `scripts/README.md` | Document new script |
 | Modify | `dart_test.yaml` | Add `doc-snippets` tag definition |
 
@@ -261,7 +261,7 @@ class SnippetGroup {
 void main(List<String> args) {
   final outputPath = args.contains('--output')
       ? args[args.indexOf('--output') + 1]
-      : 'test/docs/docs_snippets_test.dart';
+      : 'test/doc/docs_snippets_test.dart';
   final verbose = args.contains('--verbose');
 
   stdout.writeln('Documentation Snippet Extractor');
@@ -395,7 +395,7 @@ Update `main()` to add:
   // ──────────────────────────────────────────────
   final filesToScan = <String>[
     'README.md',
-    ...Directory('docs/guides')
+    ...Directory('doc/guides')
         .listSync()
         .whereType<File>()
         .where((f) => f.path.endsWith('.md'))
@@ -1121,7 +1121,7 @@ Add at the end of `main()`:
 - [ ] **Step 3: Run the script and generate the test file**
 
 Run: `dart run scripts/docs_snippet_extractor.dart --verbose`
-Expected: Creates `test/docs/docs_snippets_test.dart`, prints summary of extracted snippets.
+Expected: Creates `test/doc/docs_snippets_test.dart`, prints summary of extracted snippets.
 
 - [ ] **Step 4: Commit**
 
@@ -1137,7 +1137,7 @@ git commit -m "feat(scripts): implement full test file assembly and output"
 ### Task 7C.1: Verify generated test file compiles
 
 **Files:**
-- Verify: `test/docs/docs_snippets_test.dart` (auto-generated)
+- Verify: `test/doc/docs_snippets_test.dart` (auto-generated)
 
 - [ ] **Step 1: Run the script to generate the test file**
 
@@ -1145,7 +1145,7 @@ Run: `dart run scripts/docs_snippet_extractor.dart`
 
 - [ ] **Step 2: Run the Dart analyzer on the generated file**
 
-Run: `dart analyze test/docs/docs_snippets_test.dart`
+Run: `dart analyze test/doc/docs_snippets_test.dart`
 Expected: No errors. Warnings about unused variables are acceptable (doc snippets may define vars for demonstration without using them).
 
 - [ ] **Step 3: Fix any generation issues**
@@ -1156,12 +1156,12 @@ If the analyzer reports errors, fix the generator logic in `scripts/docs_snippet
 - Incorrect indentation breaking Dart syntax
 - Missing imports in the generated file header
 
-Regenerate and re-analyze until clean: `dart run scripts/docs_snippet_extractor.dart && dart analyze test/docs/docs_snippets_test.dart`
+Regenerate and re-analyze until clean: `dart run scripts/docs_snippet_extractor.dart && dart analyze test/doc/docs_snippets_test.dart`
 
 - [ ] **Step 4: Commit the generated test file**
 
 ```bash
-git add test/docs/docs_snippets_test.dart
+git add test/doc/docs_snippets_test.dart
 git commit -m "test: add auto-generated documentation snippet tests"
 ```
 
@@ -1170,12 +1170,12 @@ git commit -m "test: add auto-generated documentation snippet tests"
 ### Task 7C.2: Run generated tests and fix issues
 
 **Files:**
-- Verify: `test/docs/docs_snippets_test.dart`
+- Verify: `test/doc/docs_snippets_test.dart`
 - May modify: `scripts/docs_snippet_extractor.dart` (if generator produces incorrect tests)
 
 - [ ] **Step 1: Run offline doc-snippet tests**
 
-Run: `dart test test/docs/docs_snippets_test.dart --exclude-tags sepolia -r expanded`
+Run: `dart test test/doc/docs_snippets_test.dart --exclude-tags sepolia -r expanded`
 Expected: All offline tests pass (README, tutorial, custom type groups).
 
 - [ ] **Step 2: Debug and fix any offline test failures**
@@ -1189,13 +1189,13 @@ Iterate: fix generator → regenerate → re-run tests.
 
 - [ ] **Step 3: Run onchain doc-snippet tests (if .env available)**
 
-Run: `dart test test/docs/docs_snippets_test.dart --tags sepolia -r expanded`
+Run: `dart test test/doc/docs_snippets_test.dart --tags sepolia -r expanded`
 Expected: Onchain tests pass if `.env` is configured, or skip if not.
 
 - [ ] **Step 4: Commit fixes**
 
 ```bash
-git add scripts/docs_snippet_extractor.dart test/docs/docs_snippets_test.dart
+git add scripts/docs_snippet_extractor.dart test/doc/docs_snippets_test.dart
 git commit -m "fix(scripts): resolve doc snippet test generation issues"
 ```
 
@@ -1231,7 +1231,7 @@ Add the new script section after the existing `sepolia_schema_bootstrap.dart` se
 ```markdown
 ## `docs_snippet_extractor.dart`
 
-Extracts all `` ```dart `` code blocks from `README.md` and `docs/guides/*.md`, then generates `test/docs/docs_snippets_test.dart` — a complete test file that validates every documentation code snippet compiles and runs without error.
+Extracts all `` ```dart `` code blocks from `README.md` and `doc/guides/*.md`, then generates `test/doc/docs_snippets_test.dart` — a complete test file that validates every documentation code snippet compiles and runs without error.
 
 **When to run:** After modifying any documentation that contains Dart code examples. The generated test file is a derived artifact and should not be edited manually.
 
@@ -1251,7 +1251,7 @@ dart run scripts/docs_snippet_extractor.dart
 ```
 
 Options:
-- `--output <path>` — Override output file (default: `test/docs/docs_snippets_test.dart`)
+- `--output <path>` — Override output file (default: `test/doc/docs_snippets_test.dart`)
 - `--verbose` — Print detailed extraction info
 
 ### Test the generated file
@@ -1321,7 +1321,7 @@ git commit -m "feat: phase 7 — automated doc snippet extraction and validation
 dart run scripts/docs_snippet_extractor.dart --verbose
 
 # Analyze generated file
-dart analyze test/docs/docs_snippets_test.dart
+dart analyze test/doc/docs_snippets_test.dart
 
 # Run offline doc tests
 dart test --tags doc-snippets --exclude-tags sepolia -r expanded
