@@ -80,3 +80,7 @@
 
 ### Phase 8.1 Documentation Patterns
 - **Conceptual Separation in Docs**: When describing the library or its capabilities, explicitly maintain the conceptual separation between the portable Location Protocol payload and the EVM-specific EAS envelope. Do not conflate the portability of the payload with the EVM-bound nature of the EAS signature.
+
+### Issue #4 Cross-Chain UID Test Pattern
+- **Direct UID parity proof**: For cross-chain offchain attestation tests, recompute `OffchainSigner.computeOffchainUID(...)` from each `SignedOffchainAttestation` using the returned fields (`schemaUID`, `recipient`, `time`, `expirationTime`, `revocable`, `refUID`, `data`, `salt.toBytes()`) instead of relying only on `signed.uid` equality.
+- **Domain/message separation proof**: Rebuild typed-data JSON with `buildOffchainTypedDataJson(...)` for each chain and assert identical `message` maps plus different `domain.chainId` and `domain.verifyingContract`. This documents why signatures differ while UIDs stay stable.
