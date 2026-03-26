@@ -74,8 +74,8 @@ class OffchainSigner {
     String? refUID,
     Uint8List? salt,
   }) async {
-    final now = time ??
-        BigInt.from(DateTime.now().millisecondsSinceEpoch ~/ 1000);
+    final now =
+        time ?? BigInt.from(DateTime.now().millisecondsSinceEpoch ~/ 1000);
     final expTime = expirationTime ?? BigInt.zero;
     final ref = refUID ?? EASConstants.zeroBytes32;
     final saltBytes = salt ?? EASConstants.generateSalt();
@@ -142,7 +142,8 @@ class OffchainSigner {
 
   /// Verifies a signed offchain attestation.
   VerificationResult verifyOffchainAttestation(
-      SignedOffchainAttestation attestation) {
+    SignedOffchainAttestation attestation,
+  ) {
     final saltBytes = Uint8List.fromList(attestation.salt.toBytes());
 
     // 1. Verify UID
@@ -194,8 +195,11 @@ class OffchainSigner {
       v,
     ];
 
-    final recoveredPubKey =
-        ETHPublicKey.getPublicKey(hash, sigBytes, hashMessage: false);
+    final recoveredPubKey = ETHPublicKey.getPublicKey(
+      hash,
+      sigBytes,
+      hashMessage: false,
+    );
     if (recoveredPubKey == null) {
       return VerificationResult(
         isValid: false,
@@ -216,78 +220,6 @@ class OffchainSigner {
           : null,
     );
   }
-
-  Eip712TypedData _buildTypedData({
-    required String schemaUID,
-    required String recipient,
-    required BigInt time,
-    required BigInt expirationTime,
-    required bool revocable,
-    required String refUID,
-    required Uint8List data,
-    required Uint8List salt,
-  }) {
-    return Eip712TypedData(
-      types: {
-        'EIP712Domain': [
-          Eip712TypeDetails(name: 'name', type: 'string'),
-          Eip712TypeDetails(name: 'version', type: 'string'),
-          Eip712TypeDetails(name: 'chainId', type: 'uint256'),
-          Eip712TypeDetails(name: 'verifyingContract', type: 'address'),
-        ],
-        'Attest': [
-          Eip712TypeDetails(name: 'version', type: 'uint16'),
-          Eip712TypeDetails(name: 'schema', type: 'bytes32'),
-          Eip712TypeDetails(name: 'recipient', type: 'address'),
-          Eip712TypeDetails(name: 'time', type: 'uint64'),
-          Eip712TypeDetails(name: 'expirationTime', type: 'uint64'),
-          Eip712TypeDetails(name: 'revocable', type: 'bool'),
-          Eip712TypeDetails(name: 'refUID', type: 'bytes32'),
-          Eip712TypeDetails(name: 'data', type: 'bytes'),
-          Eip712TypeDetails(name: 'salt', type: 'bytes32'),
-        ],
-      },
-      primaryType: 'Attest',
-      domain: {
-        'name': 'EAS Attestation',
-        'version': easVersion,
-        'chainId': BigInt.from(chainId),
-        'verifyingContract': easContractAddress,
-      },
-      message: {
-        'version': EASConstants.attestationVersion,
-        'schema': schemaUID,
-        'recipient': recipient,
-        'time': time,
-        'expirationTime': expirationTime,
-        'revocable': revocable,
-        'refUID': refUID,
-        'data': data,
-        'salt': salt,
-      },
-    );
-  }
-
-  String _computeOffchainUID({
-    required String schemaUID,
-    required String recipient,
-    required BigInt time,
-    required BigInt expirationTime,
-    required bool revocable,
-    required String refUID,
-    required Uint8List data,
-    required Uint8List salt,
-  }) =>
-      computeOffchainUID(
-        schemaUID: schemaUID,
-        recipient: recipient,
-        time: time,
-        expirationTime: expirationTime,
-        revocable: revocable,
-        refUID: refUID,
-        data: data,
-        salt: salt,
-      );
 
   // ---------------------------------------------------------------------------
   // Public static utilities
@@ -338,7 +270,8 @@ class OffchainSigner {
       'domain': {
         'name': 'EAS Attestation',
         'version': easVersion,
-        'chainId': chainId.toString(), // decimal string — on_chain allowHex: false
+        'chainId': chainId
+            .toString(), // decimal string — on_chain allowHex: false
         'verifyingContract': easContractAddress,
       },
       'message': {
@@ -351,7 +284,8 @@ class OffchainSigner {
         'revocable': revocable, // bool as-is
         'refUID': refUID, // hex bytes32
         'data': '0x${BytesUtils.toHexString(data)}', // hex bytes
-        'salt': '0x${BytesUtils.toHexString(salt).padLeft(64, '0')}', // hex bytes32
+        'salt':
+            '0x${BytesUtils.toHexString(salt).padLeft(64, '0')}', // hex bytes32
       },
     };
   }

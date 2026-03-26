@@ -15,7 +15,8 @@ class _CapturingSigner extends Signer {
   final EIP712Signature _cannedSig;
   Uint8List? capturedDigest;
 
-  _CapturingSigner({required EIP712Signature cannedSig}) : _cannedSig = cannedSig;
+  _CapturingSigner({required EIP712Signature cannedSig})
+    : _cannedSig = cannedSig;
 
   @override
   String get address => '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
@@ -31,7 +32,8 @@ class _CapturingSigner extends Signer {
 // Shared test fixtures
 // ---------------------------------------------------------------------------
 
-const _hardhatKey = 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+const _hardhatKey =
+    'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
 const _hardhatAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
 
 const _easAddress = '0xC2679fBD37d54388Ce493F1DB75320D236e1815e';
@@ -68,14 +70,17 @@ Map<String, dynamic> _buildTestTypedDataJson() {
     },
     'message': {
       'version': '2', // decimal string
-      'schema': '0x0000000000000000000000000000000000000000000000000000000000000001',
+      'schema':
+          '0x0000000000000000000000000000000000000000000000000000000000000001',
       'recipient': '0x0000000000000000000000000000000000000000',
       'time': '1710000000', // decimal string
       'expirationTime': '0', // decimal string
       'revocable': true,
-      'refUID': '0x0000000000000000000000000000000000000000000000000000000000000000',
+      'refUID':
+          '0x0000000000000000000000000000000000000000000000000000000000000000',
       'data': '0x',
-      'salt': '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      'salt':
+          '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     },
   };
 }
@@ -86,7 +91,11 @@ Map<String, dynamic> _buildTestTypedDataJson() {
 
 void main() {
   group('Signer (abstract class)', () {
-    final cannedSig = EIP712Signature(v: 27, r: '0x' + 'aa' * 32, s: '0x' + 'bb' * 32);
+    final cannedSig = EIP712Signature(
+      v: 27,
+      r: '0x${'aa' * 32}',
+      s: '0x${'bb' * 32}',
+    );
 
     test('concrete subclass returns correct address', () {
       final signer = _CapturingSigner(cannedSig: cannedSig);
@@ -100,26 +109,29 @@ void main() {
       expect(sig.r, equals(cannedSig.r));
     });
 
-    test('default signTypedData delegates to signDigest with correct digest', () async {
-      final signer = _CapturingSigner(cannedSig: cannedSig);
-      final jsonMap = _buildTestTypedDataJson();
+    test(
+      'default signTypedData delegates to signDigest with correct digest',
+      () async {
+        final signer = _CapturingSigner(cannedSig: cannedSig);
+        final jsonMap = _buildTestTypedDataJson();
 
-      // Independently compute the expected digest
-      final expectedDigest = Uint8List.fromList(
-        Eip712TypedData.fromJson(jsonMap).encode(),
-      );
+        // Independently compute the expected digest
+        final expectedDigest = Uint8List.fromList(
+          Eip712TypedData.fromJson(jsonMap).encode(),
+        );
 
-      final sig = await signer.signTypedData(jsonMap);
+        final sig = await signer.signTypedData(jsonMap);
 
-      // signDigest was called with the correct 32-byte digest
-      expect(signer.capturedDigest, isNotNull);
-      expect(signer.capturedDigest!.length, equals(32));
-      expect(signer.capturedDigest, equals(expectedDigest));
+        // signDigest was called with the correct 32-byte digest
+        expect(signer.capturedDigest, isNotNull);
+        expect(signer.capturedDigest!.length, equals(32));
+        expect(signer.capturedDigest, equals(expectedDigest));
 
-      // returned signature matches canned value
-      expect(sig.v, equals(cannedSig.v));
-      expect(sig.r, equals(cannedSig.r));
-    });
+        // returned signature matches canned value
+        expect(sig.v, equals(cannedSig.v));
+        expect(sig.r, equals(cannedSig.r));
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------
@@ -134,7 +146,10 @@ void main() {
     });
 
     test('address returns Hardhat #0 address (case-insensitive)', () {
-      expect(signer.address.toLowerCase(), equals(_hardhatAddress.toLowerCase()));
+      expect(
+        signer.address.toLowerCase(),
+        equals(_hardhatAddress.toLowerCase()),
+      );
     });
 
     test('signDigest produces a valid signature (real crypto)', () async {
@@ -155,29 +170,45 @@ void main() {
       // Recover signer from signature
       final rBytes = BytesUtils.fromHexString(sig.r.substring(2));
       final sBytes = BytesUtils.fromHexString(sig.s.substring(2));
-      final sigBytes = <int>[...List<int>.filled(32 - rBytes.length, 0), ...rBytes,
-                             ...List<int>.filled(32 - sBytes.length, 0), ...sBytes,
-                             sig.v];
+      final sigBytes = <int>[
+        ...List<int>.filled(32 - rBytes.length, 0),
+        ...rBytes,
+        ...List<int>.filled(32 - sBytes.length, 0),
+        ...sBytes,
+        sig.v,
+      ];
 
-      final recovered = ETHPublicKey.getPublicKey(digest, sigBytes, hashMessage: false);
+      final recovered = ETHPublicKey.getPublicKey(
+        digest,
+        sigBytes,
+        hashMessage: false,
+      );
       expect(recovered, isNotNull);
-      expect(recovered!.toAddress().address.toLowerCase(), equals(_hardhatAddress.toLowerCase()));
+      expect(
+        recovered!.toAddress().address.toLowerCase(),
+        equals(_hardhatAddress.toLowerCase()),
+      );
     });
 
-    test('signTypedData (inherited default) produces same digest as signDigest', () async {
-      final jsonMap = _buildTestTypedDataJson();
+    test(
+      'signTypedData (inherited default) produces same digest as signDigest',
+      () async {
+        final jsonMap = _buildTestTypedDataJson();
 
-      // Sign via signTypedData
-      final sigA = await signer.signTypedData(jsonMap);
+        // Sign via signTypedData
+        final sigA = await signer.signTypedData(jsonMap);
 
-      // Sign via signDigest with the manually computed digest
-      final digest = Uint8List.fromList(Eip712TypedData.fromJson(jsonMap).encode());
-      final sigB = await signer.signDigest(digest);
+        // Sign via signDigest with the manually computed digest
+        final digest = Uint8List.fromList(
+          Eip712TypedData.fromJson(jsonMap).encode(),
+        );
+        final sigB = await signer.signDigest(digest);
 
-      // Both paths must produce byte-identical signatures (deterministic signing)
-      expect(sigA.v, equals(sigB.v));
-      expect(sigA.r, equals(sigB.r));
-      expect(sigA.s, equals(sigB.s));
-    });
+        // Both paths must produce byte-identical signatures (deterministic signing)
+        expect(sigA.v, equals(sigB.v));
+        expect(sigA.r, equals(sigB.r));
+        expect(sigA.s, equals(sigB.s));
+      },
+    );
   });
 }
