@@ -1,4 +1,5 @@
 import 'package:test/test.dart';
+import 'package:on_chain/on_chain.dart';
 import 'package:location_protocol/src/lp/lp_payload.dart';
 import 'package:location_protocol/src/schema/schema_field.dart';
 import 'package:location_protocol/src/schema/schema_definition.dart';
@@ -22,16 +23,16 @@ void main() {
         lpVersion: '1.0.0',
         srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
         locationType: 'geojson-point',
-        location: {'type': 'Point', 'coordinates': [-103.771556, 44.967243]},
+        location: {
+          'type': 'Point',
+          'coordinates': [-103.771556, 44.967243],
+        },
       );
 
       final encoded = AbiEncoder.encode(
         schema: schema,
         lpPayload: lpPayload,
-        userData: {
-          'timestamp': BigInt.from(1710000000),
-          'memo': 'Test memo',
-        },
+        userData: {'timestamp': BigInt.from(1710000000), 'memo': 'Test memo'},
       );
 
       expect(encoded, isNotEmpty);
@@ -63,19 +64,23 @@ void main() {
         lpVersion: '1.0.0',
         srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
         locationType: 'geojson-point',
-        location: {'type': 'Point', 'coordinates': [-103.771556, 44.967243]},
+        location: {
+          'type': 'Point',
+          'coordinates': [-103.771556, 44.967243],
+        },
       );
 
-      final data = {
-        'timestamp': BigInt.from(1710000000),
-        'memo': 'Test',
-      };
+      final data = {'timestamp': BigInt.from(1710000000), 'memo': 'Test'};
 
       final encoded1 = AbiEncoder.encode(
-        schema: schema, lpPayload: lpPayload, userData: data,
+        schema: schema,
+        lpPayload: lpPayload,
+        userData: data,
       );
       final encoded2 = AbiEncoder.encode(
-        schema: schema, lpPayload: lpPayload, userData: data,
+        schema: schema,
+        lpPayload: lpPayload,
+        userData: data,
       );
 
       expect(encoded1, equals(encoded2));
@@ -93,10 +98,7 @@ void main() {
         () => AbiEncoder.encode(
           schema: schema,
           lpPayload: lpPayload,
-          userData: {
-            'wrong_key': BigInt.from(1),
-            'memo': 'test',
-          },
+          userData: {'wrong_key': BigInt.from(1), 'memo': 'test'},
         ),
         throwsA(isA<ArgumentError>()),
       );
@@ -126,17 +128,17 @@ void main() {
         lpVersion: '1.0.0',
         srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
         locationType: 'geojson-point',
-        location: {'type': 'Point', 'coordinates': [-103.77, 44.96]},
+        location: {
+          'type': 'Point',
+          'coordinates': [-103.77, 44.96],
+        },
       );
 
       // Should not throw — Map should be serialized to string
       final encoded = AbiEncoder.encode(
         schema: schema,
         lpPayload: lpPayload,
-        userData: {
-          'timestamp': BigInt.from(1710000000),
-          'memo': 'test',
-        },
+        userData: {'timestamp': BigInt.from(1710000000), 'memo': 'test'},
       );
       expect(encoded, isNotEmpty);
     });
@@ -164,12 +166,62 @@ void main() {
         lpPayload: lpPayload,
         userData: {
           'myBytes': '0x1234',
-          'myUint': '0xDEADBEEF', // even though it's string, we do not convert with toBytes, on_chain expects BigInt or String representation of number, but wait - the code DOES toBytes() but if it is uint256, it skips it!
+          'myUint':
+              '0xDEADBEEF', // even though it's string, we do not convert with toBytes, on_chain expects BigInt or String representation of number, but wait - the code DOES toBytes() but if it is uint256, it skips it!
           'myString': '0xNotBytes',
         },
       );
-      
+
       expect(encoded, isNotEmpty);
+    });
+
+    test('encodes dynamic custom schema fields like string[] and bytes32', () {
+      final dynamicSchema = SchemaDefinition(
+        fields: [
+          SchemaField(type: 'string[]', name: 'tags'),
+          SchemaField(type: 'bytes32', name: 'content_hash'),
+          SchemaField(type: 'bool', name: 'verified'),
+        ],
+      );
+
+      final lpPayload = LPPayload(
+        lpVersion: '1.0.0',
+        srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+        locationType: 'geojson-point',
+        location: {
+          'type': 'Point',
+          'coordinates': [-103.771556, 44.967243],
+        },
+      );
+
+      final encoded = AbiEncoder.encode(
+        schema: dynamicSchema,
+        lpPayload: lpPayload,
+        userData: {
+          'tags': ['dynamic', 'schema', 'test'],
+          'content_hash':
+              '0x1111111111111111111111111111111111111111111111111111111111111111',
+          'verified': true,
+        },
+      );
+
+      final decoded = ABIUtils.decode(
+        types: dynamicSchema.allFields.map((field) => field.type).toList(),
+        bytes: encoded,
+      );
+
+      expect(decoded[0], equals('1.0.0'));
+      expect(
+        decoded[1],
+        equals('http://www.opengis.net/def/crs/OGC/1.3/CRS84'),
+      );
+      expect(decoded[2], equals('geojson-point'));
+      expect(decoded[4], equals(['dynamic', 'schema', 'test']));
+      expect(
+        (decoded[5] as List<int>),
+        orderedEquals(List<int>.filled(32, 0x11)),
+      );
+      expect(decoded[6], isTrue);
     });
   });
 }

@@ -140,6 +140,33 @@ class OffchainSigner {
     );
   }
 
+  /// Signs an offchain attestation with an explicit dynamic user-data map.
+  ///
+  /// This is a convenience alias for [signOffchainAttestation] that makes the
+  /// dynamic payload use case more discoverable for downstream apps that build
+  /// schemas and user data at runtime.
+  Future<SignedOffchainAttestation> signOffchainWithData({
+    required SchemaDefinition schema,
+    required LPPayload lpPayload,
+    required Map<String, dynamic> userData,
+    String recipient = EASConstants.zeroAddress,
+    BigInt? time,
+    BigInt? expirationTime,
+    String? refUID,
+    Uint8List? salt,
+  }) {
+    return signOffchainAttestation(
+      schema: schema,
+      lpPayload: lpPayload,
+      userData: userData,
+      recipient: recipient,
+      time: time,
+      expirationTime: expirationTime,
+      refUID: refUID,
+      salt: salt,
+    );
+  }
+
   /// Verifies a signed offchain attestation.
   VerificationResult verifyOffchainAttestation(
     SignedOffchainAttestation attestation,
