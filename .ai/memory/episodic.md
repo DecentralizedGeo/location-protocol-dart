@@ -167,3 +167,10 @@
 - Status: COMPLETED
 - Context: Reframed the documentation to explicitly decouple the chain-agnostic Location Protocol payload from the Ethereum-specific EAS Reference Envelope. Clarified portability to non-EVM chains like Solana and Filecoin using native wrappers.
 - Commits: 1 commit on `main` — `docs: Phase 8.1 documentation reframing (reference implementation and EAS envelope)`
+
+### [ID: ISSUE4_UID_PARITY_TEST_REFINEMENT] -> Follows [PHASE8.1_DOC_REFRAMING]
+- Date: 2026-03-25
+- Event: Strengthened issue #4 cross-chain UID parity coverage
+- Status: COMPLETED
+- Context: Expanded `test/eas/offchain_signer_test.dart` so the multi-chain parity test now directly recomputes `OffchainSigner.computeOffchainUID(...)` from each signed attestation and rebuilds typed-data JSON for both chains. The test now proves identical UID-driving message fields and identical recomputed UIDs across chains while showing that `domain.chainId`, `domain.verifyingContract`, typed-data digests, and signatures differ.
+- Verification: `dart test test/eas/offchain_signer_test.dart -r expanded` passed with 18/18 tests.
