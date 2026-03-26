@@ -112,6 +112,31 @@ void main() {
         // Salt is random, so UIDs should differ
         expect(signed1.uid, isNot(equals(signed2.uid)));
       });
+
+      test(
+        'signOffchainWithData supports dynamic custom schema payloads',
+        () async {
+          final dynamicSchema = SchemaDefinition(
+            fields: [
+              SchemaField(type: 'string[]', name: 'tags'),
+              SchemaField(type: 'bytes32', name: 'content_hash'),
+            ],
+          );
+
+          final signed = await signer.signOffchainWithData(
+            schema: dynamicSchema,
+            lpPayload: lpPayload,
+            userData: {
+              'tags': ['user-defined', 'payload'],
+              'content_hash':
+                  '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            },
+          );
+
+          final result = signer.verifyOffchainAttestation(signed);
+          expect(result.isValid, isTrue);
+        },
+      );
     });
 
     group('verifyOffchainAttestation', () {
@@ -356,108 +381,118 @@ void main() {
       },
     );
 
-    test('offchain UID matches across chains for identical attestation payloads', () async {
-      final deterministicSalt = Uint8List(32)
-        ..[0] = 0x12
-        ..[1] = 0x34;
-      final deterministicTime = BigInt.from(1710000000);
+    test(
+      'offchain UID matches across chains for identical attestation payloads',
+      () async {
+        final deterministicSalt = Uint8List(32)
+          ..[0] = 0x12
+          ..[1] = 0x34;
+        final deterministicTime = BigInt.from(1710000000);
 
-      final sepoliaSigner = OffchainSigner.fromPrivateKey(
-        privateKeyHex: testPrivateKeyHex,
-        chainId: 11155111,
-        easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
-      );
-      final baseSepoliaSigner = OffchainSigner.fromPrivateKey(
-        privateKeyHex: testPrivateKeyHex,
-        chainId: 84532,
-        easContractAddress: '0x4200000000000000000000000000000000000021',
-      );
+        final sepoliaSigner = OffchainSigner.fromPrivateKey(
+          privateKeyHex: testPrivateKeyHex,
+          chainId: 11155111,
+          easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+        );
+        final baseSepoliaSigner = OffchainSigner.fromPrivateKey(
+          privateKeyHex: testPrivateKeyHex,
+          chainId: 84532,
+          easContractAddress: '0x4200000000000000000000000000000000000021',
+        );
 
-      final sepoliaSigned = await sepoliaSigner.signOffchainAttestation(
-        schema: schema,
-        lpPayload: lpPayload,
-        userData: {
-          'timestamp': deterministicTime,
-          'memo': 'cross-chain parity',
-        },
-        time: deterministicTime,
-        salt: deterministicSalt,
-      );
-      final baseSepoliaSigned = await baseSepoliaSigner.signOffchainAttestation(
-        schema: schema,
-        lpPayload: lpPayload,
-        userData: {
-          'timestamp': deterministicTime,
-          'memo': 'cross-chain parity',
-        },
-        time: deterministicTime,
-        salt: deterministicSalt,
-      );
+        final sepoliaSigned = await sepoliaSigner.signOffchainAttestation(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {
+            'timestamp': deterministicTime,
+            'memo': 'cross-chain parity',
+          },
+          time: deterministicTime,
+          salt: deterministicSalt,
+        );
+        final baseSepoliaSigned = await baseSepoliaSigner
+            .signOffchainAttestation(
+              schema: schema,
+              lpPayload: lpPayload,
+              userData: {
+                'timestamp': deterministicTime,
+                'memo': 'cross-chain parity',
+              },
+              time: deterministicTime,
+              salt: deterministicSalt,
+            );
 
-      final sepoliaComputedUid = _computeUidFromSigned(sepoliaSigned);
-      final baseSepoliaComputedUid = _computeUidFromSigned(baseSepoliaSigned);
-      final sepoliaTypedData = _buildTypedDataFromSigned(
-        signed: sepoliaSigned,
-        chainId: 11155111,
-        easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
-      );
-      final baseSepoliaTypedData = _buildTypedDataFromSigned(
-        signed: baseSepoliaSigned,
-        chainId: 84532,
-        easContractAddress: '0x4200000000000000000000000000000000000021',
-      );
+        final sepoliaComputedUid = _computeUidFromSigned(sepoliaSigned);
+        final baseSepoliaComputedUid = _computeUidFromSigned(baseSepoliaSigned);
+        final sepoliaTypedData = _buildTypedDataFromSigned(
+          signed: sepoliaSigned,
+          chainId: 11155111,
+          easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+        );
+        final baseSepoliaTypedData = _buildTypedDataFromSigned(
+          signed: baseSepoliaSigned,
+          chainId: 84532,
+          easContractAddress: '0x4200000000000000000000000000000000000021',
+        );
 
-      expect(sepoliaSigned.uid, equals(baseSepoliaSigned.uid));
-      expect(sepoliaComputedUid, equals(sepoliaSigned.uid));
-      expect(baseSepoliaComputedUid, equals(baseSepoliaSigned.uid));
-      expect(sepoliaComputedUid, equals(baseSepoliaComputedUid));
+        expect(sepoliaSigned.uid, equals(baseSepoliaSigned.uid));
+        expect(sepoliaComputedUid, equals(sepoliaSigned.uid));
+        expect(baseSepoliaComputedUid, equals(baseSepoliaSigned.uid));
+        expect(sepoliaComputedUid, equals(baseSepoliaComputedUid));
 
-      expect(sepoliaSigned.schemaUID, equals(baseSepoliaSigned.schemaUID));
-      expect(sepoliaSigned.recipient, equals(baseSepoliaSigned.recipient));
-      expect(sepoliaSigned.time, equals(baseSepoliaSigned.time));
-      expect(
-        sepoliaSigned.expirationTime,
-        equals(baseSepoliaSigned.expirationTime),
-      );
-      expect(sepoliaSigned.revocable, equals(baseSepoliaSigned.revocable));
-      expect(sepoliaSigned.refUID, equals(baseSepoliaSigned.refUID));
-      expect(sepoliaSigned.data, orderedEquals(baseSepoliaSigned.data));
-      expect(sepoliaSigned.salt, equals(baseSepoliaSigned.salt));
-      expect(sepoliaSigned.signer, equals(baseSepoliaSigned.signer));
+        expect(sepoliaSigned.schemaUID, equals(baseSepoliaSigned.schemaUID));
+        expect(sepoliaSigned.recipient, equals(baseSepoliaSigned.recipient));
+        expect(sepoliaSigned.time, equals(baseSepoliaSigned.time));
+        expect(
+          sepoliaSigned.expirationTime,
+          equals(baseSepoliaSigned.expirationTime),
+        );
+        expect(sepoliaSigned.revocable, equals(baseSepoliaSigned.revocable));
+        expect(sepoliaSigned.refUID, equals(baseSepoliaSigned.refUID));
+        expect(sepoliaSigned.data, orderedEquals(baseSepoliaSigned.data));
+        expect(sepoliaSigned.salt, equals(baseSepoliaSigned.salt));
+        expect(sepoliaSigned.signer, equals(baseSepoliaSigned.signer));
 
-      expect(sepoliaTypedData['message'], equals(baseSepoliaTypedData['message']));
-      expect(
-        (sepoliaTypedData['domain'] as Map<String, dynamic>)['chainId'],
-        isNot(
-          equals(
-            (baseSepoliaTypedData['domain'] as Map<String, dynamic>)['chainId'],
+        expect(
+          sepoliaTypedData['message'],
+          equals(baseSepoliaTypedData['message']),
+        );
+        expect(
+          (sepoliaTypedData['domain'] as Map<String, dynamic>)['chainId'],
+          isNot(
+            equals(
+              (baseSepoliaTypedData['domain']
+                  as Map<String, dynamic>)['chainId'],
+            ),
           ),
-        ),
-      );
-      expect(
-        (sepoliaTypedData['domain'] as Map<String, dynamic>)['verifyingContract'],
-        isNot(
-          equals(
-            (baseSepoliaTypedData['domain'] as Map<String, dynamic>)['verifyingContract'],
+        );
+        expect(
+          (sepoliaTypedData['domain']
+              as Map<String, dynamic>)['verifyingContract'],
+          isNot(
+            equals(
+              (baseSepoliaTypedData['domain']
+                  as Map<String, dynamic>)['verifyingContract'],
+            ),
           ),
-        ),
-      );
-      expect(
-        Eip712TypedData.fromJson(sepoliaTypedData).encode(),
-        isNot(
-          equals(Eip712TypedData.fromJson(baseSepoliaTypedData).encode()),
-        ),
-      );
+        );
+        expect(
+          Eip712TypedData.fromJson(sepoliaTypedData).encode(),
+          isNot(
+            equals(Eip712TypedData.fromJson(baseSepoliaTypedData).encode()),
+          ),
+        );
 
-      expect(
-        sepoliaSigned.signature.r,
-        isNot(equals(baseSepoliaSigned.signature.r)),
-      );
-      expect(
-        sepoliaSigned.signature.s,
-        isNot(equals(baseSepoliaSigned.signature.s)),
-      );
-    });
+        expect(
+          sepoliaSigned.signature.r,
+          isNot(equals(baseSepoliaSigned.signature.r)),
+        );
+        expect(
+          sepoliaSigned.signature.s,
+          isNot(equals(baseSepoliaSigned.signature.s)),
+        );
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------

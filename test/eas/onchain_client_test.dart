@@ -11,7 +11,8 @@ void main() {
       final client = EASClient(
         provider: DefaultRpcProvider(
           rpcUrl: 'https://rpc.sepolia.org',
-          privateKeyHex: 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+          privateKeyHex:
+              'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
           chainId: 11155111,
         ),
       );
@@ -22,7 +23,8 @@ void main() {
       final client = EASClient(
         provider: DefaultRpcProvider(
           rpcUrl: 'https://rpc.sepolia.org',
-          privateKeyHex: 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+          privateKeyHex:
+              'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
           chainId: 11155111,
         ),
       );
@@ -33,7 +35,8 @@ void main() {
       final client = EASClient(
         provider: DefaultRpcProvider(
           rpcUrl: 'https://rpc.sepolia.org',
-          privateKeyHex: 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+          privateKeyHex:
+              'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
           chainId: 11155111,
         ),
         easAddress: '0xCustomEAS',
@@ -96,11 +99,45 @@ void main() {
       expect(data1, isNot(equals(data2)));
     });
 
+    test('buildAttestCallDataWithUserData matches primary builder output', () {
+      final schema = SchemaDefinition(
+        fields: [
+          SchemaField(type: 'string[]', name: 'tags'),
+          SchemaField(type: 'bytes32', name: 'content_hash'),
+        ],
+      );
+      final lpPayload = LPPayload(
+        lpVersion: '1.0.0',
+        srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+        locationType: 'address',
+        location: 'test-location',
+      );
+      final userData = {
+        'tags': ['wallet', 'dynamic'],
+        'content_hash':
+            '0x2222222222222222222222222222222222222222222222222222222222222222',
+      };
+
+      final viaPrimary = EASClient.buildAttestCallData(
+        schema: schema,
+        lpPayload: lpPayload,
+        userData: userData,
+      );
+      final viaAlias = EASClient.buildAttestCallDataWithUserData(
+        schema: schema,
+        lpPayload: lpPayload,
+        userData: userData,
+      );
+
+      expect(viaAlias, equals(viaPrimary));
+    });
+
     test('attest attempts RPC call (fails gracefully without network)', () {
       final client = EASClient(
         provider: DefaultRpcProvider(
           rpcUrl: 'http://localhost:1',
-          privateKeyHex: 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+          privateKeyHex:
+              'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
           chainId: 11155111,
         ),
       );
@@ -128,7 +165,8 @@ void main() {
       final client = EASClient(
         provider: DefaultRpcProvider(
           rpcUrl: 'http://localhost:1',
-          privateKeyHex: 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+          privateKeyHex:
+              'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
           chainId: 11155111,
         ),
       );
@@ -140,21 +178,24 @@ void main() {
       );
     });
 
-    test('getAttestation attempts RPC call (fails gracefully without network)', () {
-      final client = EASClient(
-        provider: DefaultRpcProvider(
-          rpcUrl: 'http://localhost:1',
-          privateKeyHex: 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
-          chainId: 11155111,
-        ),
-      );
-      expect(
-        () => client.getAttestation(
-          '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
-        ),
-        throwsA(isNot(isA<UnimplementedError>())),
-      );
-    });
-
+    test(
+      'getAttestation attempts RPC call (fails gracefully without network)',
+      () {
+        final client = EASClient(
+          provider: DefaultRpcProvider(
+            rpcUrl: 'http://localhost:1',
+            privateKeyHex:
+                'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+            chainId: 11155111,
+          ),
+        );
+        expect(
+          () => client.getAttestation(
+            '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+          ),
+          throwsA(isNot(isA<UnimplementedError>())),
+        );
+      },
+    );
   });
 }
