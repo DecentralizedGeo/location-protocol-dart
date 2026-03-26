@@ -41,7 +41,10 @@ void main() {
       lpVersion: '1.0.0',
       srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
       locationType: 'geojson-point',
-      location: {'type': 'Point', 'coordinates': [-103.771556, 44.967243]},
+      location: {
+        'type': 'Point',
+        'coordinates': [-103.771556, 44.967243],
+      },
     );
   });
 
@@ -65,10 +68,7 @@ void main() {
         final signed = await signer.signOffchainAttestation(
           schema: schema,
           lpPayload: lpPayload,
-          userData: {
-            'timestamp': BigInt.from(1710000000),
-            'memo': 'Test',
-          },
+          userData: {'timestamp': BigInt.from(1710000000), 'memo': 'Test'},
         );
 
         expect(signed.salt, startsWith('0x'));
@@ -79,10 +79,7 @@ void main() {
         final signed = await signer.signOffchainAttestation(
           schema: schema,
           lpPayload: lpPayload,
-          userData: {
-            'timestamp': BigInt.from(1710000000),
-            'memo': 'Test',
-          },
+          userData: {'timestamp': BigInt.from(1710000000), 'memo': 'Test'},
         );
 
         expect(signed.version, equals(EASConstants.attestationVersion));
@@ -92,10 +89,7 @@ void main() {
         final signed = await signer.signOffchainAttestation(
           schema: schema,
           lpPayload: lpPayload,
-          userData: {
-            'timestamp': BigInt.from(1710000000),
-            'memo': 'Test',
-          },
+          userData: {'timestamp': BigInt.from(1710000000), 'memo': 'Test'},
         );
 
         expect(signed.signature.v, anyOf(equals(27), equals(28)));
@@ -107,18 +101,12 @@ void main() {
         final signed1 = await signer.signOffchainAttestation(
           schema: schema,
           lpPayload: lpPayload,
-          userData: {
-            'timestamp': BigInt.from(1710000000),
-            'memo': 'Test',
-          },
+          userData: {'timestamp': BigInt.from(1710000000), 'memo': 'Test'},
         );
         final signed2 = await signer.signOffchainAttestation(
           schema: schema,
           lpPayload: lpPayload,
-          userData: {
-            'timestamp': BigInt.from(1710000000),
-            'memo': 'Test',
-          },
+          userData: {'timestamp': BigInt.from(1710000000), 'memo': 'Test'},
         );
 
         // Salt is random, so UIDs should differ
@@ -145,10 +133,7 @@ void main() {
         final signed = await signer.signOffchainAttestation(
           schema: schema,
           lpPayload: lpPayload,
-          userData: {
-            'timestamp': BigInt.from(1710000000),
-            'memo': 'Test',
-          },
+          userData: {'timestamp': BigInt.from(1710000000), 'memo': 'Test'},
         );
 
         final result = signer.verifyOffchainAttestation(signed);
@@ -174,12 +159,14 @@ void main() {
   // ---------------------------------------------------------------------------
 
   group('public utilities', () {
-    const schemaUID = '0x0000000000000000000000000000000000000000000000000000000000000001';
+    const schemaUID =
+        '0x0000000000000000000000000000000000000000000000000000000000000001';
     const recipient = '0x0000000000000000000000000000000000000000';
     final time = BigInt.from(1710000000);
     final expirationTime = BigInt.zero;
     const revocable = true;
-    const refUID = '0x0000000000000000000000000000000000000000000000000000000000000000';
+    const refUID =
+        '0x0000000000000000000000000000000000000000000000000000000000000000';
     final data = Uint8List(0);
     final salt = Uint8List(32); // all-zero salt for determinism
 
@@ -197,7 +184,10 @@ void main() {
         salt: salt,
       );
 
-      expect(json.keys, containsAll(['types', 'primaryType', 'domain', 'message']));
+      expect(
+        json.keys,
+        containsAll(['types', 'primaryType', 'domain', 'message']),
+      );
       expect(json['primaryType'], equals('Attest'));
     });
 
@@ -218,138 +208,153 @@ void main() {
       final domain = json['domain'] as Map<String, dynamic>;
       expect(domain['name'], equals('EAS Attestation'));
       expect(domain['chainId'], equals('11155111')); // decimal string
-      expect(domain['verifyingContract'], equals('0xC2679fBD37d54388Ce493F1DB75320D236e1815e'));
+      expect(
+        domain['verifyingContract'],
+        equals('0xC2679fBD37d54388Ce493F1DB75320D236e1815e'),
+      );
     });
 
-    test('buildOffchainTypedDataJson message has correct schema and version', () {
-      final json = OffchainSigner.buildOffchainTypedDataJson(
-        chainId: 11155111,
-        easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
-        schemaUID: schemaUID,
-        recipient: recipient,
-        time: time,
-        expirationTime: expirationTime,
-        revocable: revocable,
-        refUID: refUID,
-        data: data,
-        salt: salt,
-      );
+    test(
+      'buildOffchainTypedDataJson message has correct schema and version',
+      () {
+        final json = OffchainSigner.buildOffchainTypedDataJson(
+          chainId: 11155111,
+          easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+          schemaUID: schemaUID,
+          recipient: recipient,
+          time: time,
+          expirationTime: expirationTime,
+          revocable: revocable,
+          refUID: refUID,
+          data: data,
+          salt: salt,
+        );
 
-      final message = json['message'] as Map<String, dynamic>;
-      expect(message['schema'], equals(schemaUID));
-      // version is attestationVersion (int 2) — stored as decimal string
-      expect(message['version'], equals('2'));
-    });
+        final message = json['message'] as Map<String, dynamic>;
+        expect(message['schema'], equals(schemaUID));
+        // version is attestationVersion (int 2) — stored as decimal string
+        expect(message['version'], equals('2'));
+      },
+    );
 
-    test('buildOffchainTypedDataJson types has 9 Attest fields and 4 EIP712Domain fields', () {
-      final json = OffchainSigner.buildOffchainTypedDataJson(
-        chainId: 11155111,
-        easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
-        schemaUID: schemaUID,
-        recipient: recipient,
-        time: time,
-        expirationTime: expirationTime,
-        revocable: revocable,
-        refUID: refUID,
-        data: data,
-        salt: salt,
-      );
+    test(
+      'buildOffchainTypedDataJson types has 9 Attest fields and 4 EIP712Domain fields',
+      () {
+        final json = OffchainSigner.buildOffchainTypedDataJson(
+          chainId: 11155111,
+          easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+          schemaUID: schemaUID,
+          recipient: recipient,
+          time: time,
+          expirationTime: expirationTime,
+          revocable: revocable,
+          refUID: refUID,
+          data: data,
+          salt: salt,
+        );
 
-      final types = json['types'] as Map<String, dynamic>;
-      final attestFields = types['Attest'] as List<dynamic>;
-      final domainFields = types['EIP712Domain'] as List<dynamic>;
-      expect(attestFields.length, equals(9));
-      expect(domainFields.length, equals(4));
-    });
+        final types = json['types'] as Map<String, dynamic>;
+        final attestFields = types['Attest'] as List<dynamic>;
+        final domainFields = types['EIP712Domain'] as List<dynamic>;
+        expect(attestFields.length, equals(9));
+        expect(domainFields.length, equals(4));
+      },
+    );
 
-    test('buildOffchainTypedDataJson digest parities with native Eip712TypedData', () {
-      final json = OffchainSigner.buildOffchainTypedDataJson(
-        chainId: 11155111,
-        easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
-        schemaUID: schemaUID,
-        recipient: recipient,
-        time: time,
-        expirationTime: expirationTime,
-        revocable: revocable,
-        refUID: refUID,
-        data: data,
-        salt: salt,
-      );
+    test(
+      'buildOffchainTypedDataJson digest parities with native Eip712TypedData',
+      () {
+        final json = OffchainSigner.buildOffchainTypedDataJson(
+          chainId: 11155111,
+          easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+          schemaUID: schemaUID,
+          recipient: recipient,
+          time: time,
+          expirationTime: expirationTime,
+          revocable: revocable,
+          refUID: refUID,
+          data: data,
+          salt: salt,
+        );
 
-      // Digest from JSON-safe map (wallet path)
-      final digestFromJson = Eip712TypedData.fromJson(json).encode();
+        // Digest from JSON-safe map (wallet path)
+        final digestFromJson = Eip712TypedData.fromJson(json).encode();
 
-      // Digest from native Eip712TypedData (existing internal path) — not yet
-      // exposed as public, but we can build it ourselves for the parity check:
-      final nativeTypedData = Eip712TypedData(
-        types: {
-          'EIP712Domain': [
-            Eip712TypeDetails(name: 'name', type: 'string'),
-            Eip712TypeDetails(name: 'version', type: 'string'),
-            Eip712TypeDetails(name: 'chainId', type: 'uint256'),
-            Eip712TypeDetails(name: 'verifyingContract', type: 'address'),
-          ],
-          'Attest': [
-            Eip712TypeDetails(name: 'version', type: 'uint16'),
-            Eip712TypeDetails(name: 'schema', type: 'bytes32'),
-            Eip712TypeDetails(name: 'recipient', type: 'address'),
-            Eip712TypeDetails(name: 'time', type: 'uint64'),
-            Eip712TypeDetails(name: 'expirationTime', type: 'uint64'),
-            Eip712TypeDetails(name: 'revocable', type: 'bool'),
-            Eip712TypeDetails(name: 'refUID', type: 'bytes32'),
-            Eip712TypeDetails(name: 'data', type: 'bytes'),
-            Eip712TypeDetails(name: 'salt', type: 'bytes32'),
-          ],
-        },
-        primaryType: 'Attest',
-        domain: {
-          'name': 'EAS Attestation',
-          'version': '1.0.0',
-          'chainId': BigInt.from(11155111),
-          'verifyingContract': '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
-        },
-        message: {
-          'version': EASConstants.attestationVersion,
-          'schema': schemaUID,
-          'recipient': recipient,
-          'time': time,
-          'expirationTime': expirationTime,
-          'revocable': revocable,
-          'refUID': refUID,
-          'data': data,
-          'salt': salt,
-        },
-      );
+        // Digest from native Eip712TypedData (existing internal path) — not yet
+        // exposed as public, but we can build it ourselves for the parity check:
+        final nativeTypedData = Eip712TypedData(
+          types: {
+            'EIP712Domain': [
+              Eip712TypeDetails(name: 'name', type: 'string'),
+              Eip712TypeDetails(name: 'version', type: 'string'),
+              Eip712TypeDetails(name: 'chainId', type: 'uint256'),
+              Eip712TypeDetails(name: 'verifyingContract', type: 'address'),
+            ],
+            'Attest': [
+              Eip712TypeDetails(name: 'version', type: 'uint16'),
+              Eip712TypeDetails(name: 'schema', type: 'bytes32'),
+              Eip712TypeDetails(name: 'recipient', type: 'address'),
+              Eip712TypeDetails(name: 'time', type: 'uint64'),
+              Eip712TypeDetails(name: 'expirationTime', type: 'uint64'),
+              Eip712TypeDetails(name: 'revocable', type: 'bool'),
+              Eip712TypeDetails(name: 'refUID', type: 'bytes32'),
+              Eip712TypeDetails(name: 'data', type: 'bytes'),
+              Eip712TypeDetails(name: 'salt', type: 'bytes32'),
+            ],
+          },
+          primaryType: 'Attest',
+          domain: {
+            'name': 'EAS Attestation',
+            'version': '1.0.0',
+            'chainId': BigInt.from(11155111),
+            'verifyingContract': '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+          },
+          message: {
+            'version': EASConstants.attestationVersion,
+            'schema': schemaUID,
+            'recipient': recipient,
+            'time': time,
+            'expirationTime': expirationTime,
+            'revocable': revocable,
+            'refUID': refUID,
+            'data': data,
+            'salt': salt,
+          },
+        );
 
-      expect(digestFromJson, equals(nativeTypedData.encode()));
-    });
+        expect(digestFromJson, equals(nativeTypedData.encode()));
+      },
+    );
 
-    test('computeOffchainUID matches signOffchainAttestation UID (deterministic salt)', () async {
-      final deterministicSalt = Uint8List(32)
-        ..[0] = 0xAB
-        ..[1] = 0xCD;
+    test(
+      'computeOffchainUID matches signOffchainAttestation UID (deterministic salt)',
+      () async {
+        final deterministicSalt = Uint8List(32)
+          ..[0] = 0xAB
+          ..[1] = 0xCD;
 
-      final signed = await signer.signOffchainAttestation(
-        schema: schema,
-        lpPayload: lpPayload,
-        userData: {'timestamp': BigInt.from(1710000000), 'memo': 'UID test'},
-        time: BigInt.from(1710000000),
-        salt: deterministicSalt,
-      );
+        final signed = await signer.signOffchainAttestation(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {'timestamp': BigInt.from(1710000000), 'memo': 'UID test'},
+          time: BigInt.from(1710000000),
+          salt: deterministicSalt,
+        );
 
-      final computedUID = OffchainSigner.computeOffchainUID(
-        schemaUID: signed.schemaUID,
-        recipient: signed.recipient,
-        time: signed.time,
-        expirationTime: signed.expirationTime,
-        revocable: signed.revocable,
-        refUID: signed.refUID,
-        data: signed.data,
-        salt: deterministicSalt,
-      );
+        final computedUID = OffchainSigner.computeOffchainUID(
+          schemaUID: signed.schemaUID,
+          recipient: signed.recipient,
+          time: signed.time,
+          expirationTime: signed.expirationTime,
+          revocable: signed.revocable,
+          refUID: signed.refUID,
+          data: signed.data,
+          salt: deterministicSalt,
+        );
 
-      expect(computedUID, equals(signed.uid));
-    });
+        expect(computedUID, equals(signed.uid));
+      },
+    );
 
     test('offchain UID matches across chains for identical attestation payloads', () async {
       final deterministicSalt = Uint8List(32)
@@ -410,44 +415,54 @@ void main() {
       expect(sepoliaSigned.schemaUID, equals(baseSepoliaSigned.schemaUID));
       expect(sepoliaSigned.recipient, equals(baseSepoliaSigned.recipient));
       expect(sepoliaSigned.time, equals(baseSepoliaSigned.time));
-      expect(sepoliaSigned.expirationTime, equals(baseSepoliaSigned.expirationTime));
+      expect(
+        sepoliaSigned.expirationTime,
+        equals(baseSepoliaSigned.expirationTime),
+      );
       expect(sepoliaSigned.revocable, equals(baseSepoliaSigned.revocable));
       expect(sepoliaSigned.refUID, equals(baseSepoliaSigned.refUID));
       expect(sepoliaSigned.data, orderedEquals(baseSepoliaSigned.data));
       expect(sepoliaSigned.salt, equals(baseSepoliaSigned.salt));
       expect(sepoliaSigned.signer, equals(baseSepoliaSigned.signer));
 
-      expect(
-        sepoliaTypedData['message'],
-        equals(baseSepoliaTypedData['message']),
-      );
+      expect(sepoliaTypedData['message'], equals(baseSepoliaTypedData['message']));
       expect(
         (sepoliaTypedData['domain'] as Map<String, dynamic>)['chainId'],
-        isNot(equals((baseSepoliaTypedData['domain'] as Map<String, dynamic>)['chainId'])),
+        isNot(
+          equals(
+            (baseSepoliaTypedData['domain'] as Map<String, dynamic>)['chainId'],
+          ),
+        ),
       );
       expect(
         (sepoliaTypedData['domain'] as Map<String, dynamic>)['verifyingContract'],
         isNot(
-          equals((baseSepoliaTypedData['domain'] as Map<String, dynamic>)['verifyingContract']),
+          equals(
+            (baseSepoliaTypedData['domain'] as Map<String, dynamic>)['verifyingContract'],
+          ),
         ),
       );
       expect(
         Eip712TypedData.fromJson(sepoliaTypedData).encode(),
-        isNot(equals(Eip712TypedData.fromJson(baseSepoliaTypedData).encode())),
+        isNot(
+          equals(Eip712TypedData.fromJson(baseSepoliaTypedData).encode()),
+        ),
       );
 
-      expect(sepoliaSigned.signature.r, isNot(equals(baseSepoliaSigned.signature.r)));
-      expect(sepoliaSigned.signature.s, isNot(equals(baseSepoliaSigned.signature.s)));
+      expect(
+        sepoliaSigned.signature.r,
+        isNot(equals(baseSepoliaSigned.signature.r)),
+      );
+      expect(
+        sepoliaSigned.signature.s,
+        isNot(equals(baseSepoliaSigned.signature.s)),
+      );
     });
   });
 
   // ---------------------------------------------------------------------------
   // Task 5: OffchainSigner constructor refactor + fromPrivateKey factory
   // ---------------------------------------------------------------------------
-
-  // Helper: a Signer that returns v in 0/1 range to test normalization
-  late LocalKeySigner _realLocalKey;
-  late _LowVSignerWrapper _lowVSigner;
 
   group('fromPrivateKey factory', () {
     test('constructs OffchainSigner with correct signerAddress', () {
@@ -462,50 +477,54 @@ void main() {
       );
     });
 
-    test('primary constructor + fromPrivateKey produce identical attestations', () async {
-      final detSalt = Uint8List(32)..[0] = 0x42;
-      final detTime = BigInt.from(1710000001);
+    test(
+      'primary constructor + fromPrivateKey produce identical attestations',
+      () async {
+        final detSalt = Uint8List(32)..[0] = 0x42;
+        final detTime = BigInt.from(1710000001);
 
-      // via fromPrivateKey
-      final signerA = OffchainSigner.fromPrivateKey(
-        privateKeyHex: testPrivateKeyHex,
-        chainId: 11155111,
-        easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
-      );
+        // via fromPrivateKey
+        final signerA = OffchainSigner.fromPrivateKey(
+          privateKeyHex: testPrivateKeyHex,
+          chainId: 11155111,
+          easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+        );
 
-      // via primary constructor w/ LocalKeySigner
-      final signerB = OffchainSigner(
-        signer: LocalKeySigner(privateKeyHex: testPrivateKeyHex),
-        chainId: 11155111,
-        easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
-      );
+        // via primary constructor w/ LocalKeySigner
+        final signerB = OffchainSigner(
+          signer: LocalKeySigner(privateKeyHex: testPrivateKeyHex),
+          chainId: 11155111,
+          easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+        );
 
-      final signedA = await signerA.signOffchainAttestation(
-        schema: schema,
-        lpPayload: lpPayload,
-        userData: {'timestamp': BigInt.from(1710000000), 'memo': 'parity'},
-        time: detTime,
-        salt: detSalt,
-      );
+        final signedA = await signerA.signOffchainAttestation(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {'timestamp': BigInt.from(1710000000), 'memo': 'parity'},
+          time: detTime,
+          salt: detSalt,
+        );
 
-      final signedB = await signerB.signOffchainAttestation(
-        schema: schema,
-        lpPayload: lpPayload,
-        userData: {'timestamp': BigInt.from(1710000000), 'memo': 'parity'},
-        time: detTime,
-        salt: detSalt,
-      );
+        final signedB = await signerB.signOffchainAttestation(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {'timestamp': BigInt.from(1710000000), 'memo': 'parity'},
+          time: detTime,
+          salt: detSalt,
+        );
 
-      expect(signedA.uid, equals(signedB.uid));
-      expect(signedA.signature.v, equals(signedB.signature.v));
-      expect(signedA.signature.r, equals(signedB.signature.r));
-      expect(signedA.signature.s, equals(signedB.signature.s));
-    });
+        expect(signedA.uid, equals(signedB.uid));
+        expect(signedA.signature.v, equals(signedB.signature.v));
+        expect(signedA.signature.r, equals(signedB.signature.r));
+        expect(signedA.signature.s, equals(signedB.signature.s));
+      },
+    );
   });
 
   group('v normalization', () {
     test('normalizes v from 0/1 range to 27/28', () async {
-      const keyHex = 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+      const keyHex =
+          'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
       final lowVSigner = _LowVSignerWrapper(privateKeyHex: keyHex);
 
       final offchainSigner = OffchainSigner(
@@ -567,7 +586,7 @@ class _LowVSignerWrapper extends Signer {
   final LocalKeySigner _inner;
 
   _LowVSignerWrapper({required String privateKeyHex})
-      : _inner = LocalKeySigner(privateKeyHex: privateKeyHex);
+    : _inner = LocalKeySigner(privateKeyHex: privateKeyHex);
 
   @override
   String get address => _inner.address;
