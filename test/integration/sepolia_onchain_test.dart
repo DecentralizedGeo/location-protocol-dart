@@ -95,6 +95,62 @@ void main() {
       print('Attestation TX: ${result.txHash}');
       print('Attestation UID: ${result.uid}');
     }, timeout: const Timeout(Duration(minutes: 3)));
+
+    test('waitForAttestation recovers UID from a mined transaction hash', () async {
+      final client = EASClient(provider: provider);
+      final lpOnlySchema = SchemaDefinition(fields: []);
+
+      final computedUid = SchemaRegistryClient.computeSchemaUID(lpOnlySchema);
+      expect(computedUid, equals(existingSchemaUid));
+
+      final submittedPayload = LPPayload(
+        lpVersion: '1.0.0',
+        srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+        locationType: 'address',
+        location: 'wait-for-attestation-${DateTime.now().millisecondsSinceEpoch}',
+      );
+
+      final expectedEncodedPayload = AbiEncoder.encode(
+        schema: lpOnlySchema,
+        lpPayload: submittedPayload,
+        userData: const {},
+      );
+
+      final txHash = await provider.sendTransaction(
+        to: client.easAddress,
+        data: EASClient.buildAttestCallData(
+          schema: lpOnlySchema,
+          lpPayload: submittedPayload,
+          userData: const {},
+        ),
+      );
+
+      expect(txHash, startsWith('0x'));
+      expect(txHash.length, equals(66));
+
+      final uid = await client.waitForAttestation(
+        txHash,
+        timeout: const Duration(minutes: 2),
+      );
+
+      expect(uid, startsWith('0x'));
+      expect(uid.length, equals(66));
+
+      final fetched = await client.getAttestation(uid);
+      expect(fetched, isNotNull);
+
+      final attestation = fetched!;
+      expect(attestation.uid, equals(uid));
+      expect(attestation.schema.toLowerCase(), equals(existingSchemaUid!.toLowerCase()));
+      expect(attestation.recipient, equals(EASConstants.zeroAddress));
+      expect(attestation.refUID, equals(EASConstants.zeroBytes32));
+      expect(attestation.revocable, equals(lpOnlySchema.revocable));
+      expect(attestation.expirationTime, equals(BigInt.zero));
+      expect(attestation.data, equals(expectedEncodedPayload));
+
+      print('Recovered Attestation TX: $txHash');
+      print('Recovered Attestation UID: $uid');
+    }, timeout: const Timeout(Duration(minutes: 3)));
   });
 }
 

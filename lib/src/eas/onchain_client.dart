@@ -25,6 +25,8 @@ import 'schema_registry.dart';
 /// - [timestamp]: Timestamp an offchain attestation UID onchain
 /// - [registerSchema]: Register a schema (delegates to [SchemaRegistryClient])
 class EASClient {
+  static const int _bytes32HexLength = 66;
+
   final RpcProvider provider;
   final String? _easAddress;
 
@@ -110,13 +112,53 @@ class EASClient {
       if (log.topics.isNotEmpty &&
           log.topics[0] == EASConstants.attestedEventTopic &&
           log.address.toLowerCase() == lowerAddress) {
-        return log.data;
+        if (log.data.startsWith('0x') && log.data.length >= _bytes32HexLength) {
+          // Event data may be longer than a single word when ABI-encoded; the
+          // attestation UID is the first bytes32 in the payload.
+          return log.data.substring(0, _bytes32HexLength);
+        }
+
+        throw StateError(
+          'Attested event data does not contain a bytes32 UID: ${log.data}',
+        );
       }
     }
 
     throw StateError(
       'No Attested event found in receipt logs from $contractAddress',
     );
+  }
+
+  Future<(TransactionReceipt receipt, String uid)> _waitForAttestedReceipt(
+    String txHash, {
+    Duration? timeout,
+    Duration pollInterval = const Duration(seconds: 4),
+  }) async {
+    final receipt = await provider.waitForReceipt(
+      txHash,
+      timeout: timeout,
+      pollInterval: pollInterval,
+    );
+    final uid = _parseAttestedUID(receipt.logs, easAddress);
+    return (receipt, uid);
+  }
+
+  /// Waits for a submitted attestation transaction to be mined and returns
+  /// the attestation UID emitted by the `Attested` event.
+  ///
+  /// Throws [TimeoutException] if the transaction is not mined within
+  /// [timeout]. Re-throws provider errors for reverted transactions.
+  Future<String> waitForAttestation(
+    String txHash, {
+    Duration? timeout,
+    Duration pollInterval = const Duration(seconds: 4),
+  }) async {
+    final (_, uid) = await _waitForAttestedReceipt(
+      txHash,
+      timeout: timeout,
+      pollInterval: pollInterval,
+    );
+    return uid;
   }
 
   /// Submit an onchain attestation.
@@ -144,8 +186,7 @@ class EASClient {
       data: callData,
     );
 
-    final receipt = await provider.waitForReceipt(txHash);
-    final uid = _parseAttestedUID(receipt.logs, easAddress);
+    final (receipt, uid) = await _waitForAttestedReceipt(txHash);
     return AttestResult(
       txHash: txHash,
       uid: uid,
