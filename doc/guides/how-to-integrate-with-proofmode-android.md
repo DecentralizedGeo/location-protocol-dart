@@ -4,7 +4,7 @@ This guide describes the recommended way to use `location_protocol` inside the n
 
 > **What "headless" means here.** Flutter does not support true headless Dart execution. You must start a `FlutterEngine` instance even when there is no Flutter UI. The engine hosts the Dart VM and the `MethodChannel` / `EventChannel` transport that connects Kotlin to Dart. All Dart code — including `location_protocol` calls — runs only while that engine is alive.
 
-The focus is the Proofmode workflow layer that creates Location Protocol attestations from already-collected evidence. This guide does **not** recommend moving Proofmode's camera, capture, storage, or UI flows into Flutter.
+The focus is the Proofmode workflow layer that creates Location Protocol attestations (section 5 in [this diagram](https://mermaid.ai/d/c17d45e6-eae5-45ee-8a6c-20a2440737e4)) from already-collected evidence. This guide does **not** recommend moving Proofmode's camera, capture, storage, or UI flows into Flutter.
 
 ---
 
@@ -492,7 +492,7 @@ If background attestation creation is a core requirement and the engine overhead
 
 If you are integrating today, use this sequence:
 
-1. Create a `FlutterEngine` (no UI) dedicated to Proofmode layer 5
+1. Create a `FlutterEngine` (no UI) dedicated layer that creates location attestations.
 2. Register a `MethodCallHandler` that exposes `createOffchainAttestation` and `verifyOffchainAttestation`
 3. Keep Proofmode's UI, capture, and persistence fully native
 4. Add timestamp support only after the offchain path is stable
