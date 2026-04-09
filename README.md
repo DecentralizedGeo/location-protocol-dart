@@ -225,6 +225,7 @@ flowchart TD
 
 - [Getting started tutorial](doc/guides/tutorial-first-attestation.md)
 - [Tutorial: Sign with a wallet signer](doc/guides/tutorial-wallet-signer.md)
+- [How to integrate with the Proofmode Android app](doc/guides/how-to-integrate-with-proofmode-android.md)
 - [How to register and attest onchain](doc/guides/how-to-register-and-attest-onchain.md)
 - [How to build a wallet-based onchain transaction](doc/guides/how-to-wallet-onchain-transactions.md)
 - [How to add a custom location type](doc/guides/how-to-add-custom-location-type.md)
