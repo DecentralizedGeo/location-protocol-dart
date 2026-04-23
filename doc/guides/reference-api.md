@@ -36,9 +36,12 @@ classDiagram
         +buildOffchainTypedDataJson() Map
         +computeOffchainUID() String
         +signOffchainAttestation() SignedOffchainAttestation
+        +signOffchainWithData() SignedOffchainAttestation
         +verifyOffchainAttestation() VerificationResult
     }
     class EASClient {
+        +buildAttestCallData() Uint8List
+        +buildAttestCallDataWithUserData() Uint8List
         +attest() AttestResult
         +waitForAttestation() String
         +timestamp() TimestampResult
@@ -352,6 +355,7 @@ EIP-712 v2 offchain attestation signing and verification. No RPC connection requ
 | Method | Parameters | Returns | Description |
 |---|---|---|---|
 | `signOffchainAttestation({...})` | `required schema: SchemaDefinition`, `required lpPayload: LPPayload`, `required userData: Map<String, dynamic>`, `recipient: String = zeroAddress`, `time: BigInt?`, `expirationTime: BigInt?`, `refUID: String?`, `salt: Uint8List?` | `Future<SignedOffchainAttestation>` | Signs an offchain attestation using EIP-712 typed data. Generates a random salt if none provided |
+| `signOffchainWithData({...})` | `required schema: SchemaDefinition`, `required lpPayload: LPPayload`, `required userData: Map<String, dynamic>`, `recipient: String = zeroAddress`, `time: BigInt?`, `expirationTime: BigInt?`, `refUID: String?`, `salt: Uint8List?` | `Future<SignedOffchainAttestation>` | Discoverability alias for `signOffchainAttestation({...})`, intended for apps that assemble schemas and user data dynamically at runtime |
 | `verifyOffchainAttestation(SignedOffchainAttestation attestation)` | `attestation: SignedOffchainAttestation` | `VerificationResult` | Recovers the signer address and validates the UID. Synchronous |
 
 **Static methods**
@@ -386,6 +390,7 @@ If `easAddress` is omitted, the address is resolved from `ChainConfig` using `pr
 |---|---|---|---|
 | `buildTimestampCallData(String uid)` | `uid: String` | `Uint8List` | ABI-encodes call data for `EAS.timestamp(bytes32)` |
 | `buildAttestCallData({...})` | `required schema`, `required lpPayload`, `required userData`, `recipient: String = zeroAddress`, `expirationTime: BigInt?`, `refUID: String?` | `Uint8List` | ABI-encodes call data for `EAS.attest(AttestationRequest)` |
+| `buildAttestCallDataWithUserData({...})` | `required schema`, `required lpPayload`, `required userData`, `recipient: String = zeroAddress`, `expirationTime: BigInt?`, `refUID: String?` | `Uint8List` | Discoverability alias for `buildAttestCallData({...})`, intended for wallet flows that build schemas and user data dynamically at runtime |
 
 **Instance methods**
 

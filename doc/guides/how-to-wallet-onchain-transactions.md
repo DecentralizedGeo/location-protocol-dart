@@ -14,7 +14,7 @@ This guide shows how to package an onchain EAS attestation for submission via an
 
 ## Step 1 — Build the ABI-encoded calldata
 
-Use the **`static`** builder methods on `EASClient` or `SchemaRegistryClient` to produce the raw ABI-encoded calldata. Because these are static methods, they run purely offline in memory — you do **not** need to instantiate the client or provide an `RpcProvider`:
+Use the **`static`** builder methods on `EASClient` or `SchemaRegistryClient` to produce the raw ABI-encoded calldata. Because these are static methods, they run purely offline in memory — you do **not** need to instantiate the client or provide an `RpcProvider`. If your app assembles schemas and `userData` maps dynamically at runtime, prefer `buildAttestCallDataWithUserData()` for the attestation path:
 
 ```dart
 import 'package:location_protocol/location_protocol.dart';
@@ -31,7 +31,7 @@ void main() async {
     location: {'type': 'Point', 'coordinates': [-73.9857, 40.7484]},
   );
 
-  final callData = EASClient.buildAttestCallData(
+  final callData = EASClient.buildAttestCallDataWithUserData(
     schema: schema,
     lpPayload: lpPayload,
     userData: {'memo': 'My attestation'},
@@ -121,7 +121,8 @@ final txRequest = TxUtils.buildTxRequest(
 - `value` is always `'0x0'` for standard EAS attestations (no ETH transfer is needed).
 - `from` is optional — omit it if your wallet SDK derives the sender automatically from the connected account.
 - To wait for confirmation, use your wallet SDK's own receipt polling, or construct a read-only `DefaultRpcProvider` and call `provider.waitForReceipt(txHash)`.
-- The calldata builders (`buildAttestCallData`, `buildRegisterCallData`, `buildTimestampCallData`) are all **`static`**. They never require an active RPC connection or a private key.
+- The calldata builders (`buildAttestCallData`, `buildAttestCallDataWithUserData`, `buildRegisterCallData`, `buildTimestampCallData`) are all **`static`**. They never require an active RPC connection or a private key.
+- `buildAttestCallDataWithUserData()` is a discoverability alias for `buildAttestCallData()`. Use it when your schema and `userData` payload are created dynamically at runtime.
 - `TxUtils.buildTxRequest` does not broadcast anything — it produces a plain `Map<String, dynamic>`. Your wallet holds all signing authority.
 
 ---
