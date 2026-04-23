@@ -92,5 +92,10 @@
 - **`EASClient.buildAttestTxRequest`**: Static helper wrapping ABI-encoded calldata into `{to, data, value, from?}` transaction map for `eth_sendTransaction`.
 - **Wallet adapter pattern**: Subclass `Signer`, override `signTypedData` to call `eth_signTypedData_v4`, parse result via `EIP712Signature.fromHex`, throw `UnsupportedError` in `signDigest`.
 
+### Dynamic Schema Helper Aliases
+- **`OffchainSigner.signOffchainWithData`**: Discoverability alias for `signOffchainAttestation`, intended for apps that assemble `SchemaDefinition` objects and raw `userData` maps at runtime.
+- **`EASClient.buildAttestCallDataWithUserData`**: Discoverability alias for `buildAttestCallData`, intended for wallet/onchain flows built from runtime-defined schemas and payload maps.
+- **Validation surface**: Both aliases preserve the same `AbiEncoder` key-validation boundary and therefore surface `ArgumentError` on missing, extra, or mismatched user-data keys.
+
 ### Phase 8.1 Documentation Semantics
 - **EAS Reference Envelope vs LP Payload**: The Location Protocol payload (the 4 base fields) is completely implementation-agnostic and universally portable. EAS acts strictly as the **Reference Envelope** for EVM networks, providing EIP-712 signing and onchain anchoring. The LP payload can be wrapped safely in Solana or Filecoin native attestation services without changing its inherent data structure.

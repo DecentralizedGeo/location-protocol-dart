@@ -174,3 +174,10 @@
 - Status: COMPLETED
 - Context: Expanded `test/eas/offchain_signer_test.dart` so the multi-chain parity test now directly recomputes `OffchainSigner.computeOffchainUID(...)` from each signed attestation and rebuilds typed-data JSON for both chains. The test now proves identical UID-driving message fields and identical recomputed UIDs across chains while showing that `domain.chainId`, `domain.verifyingContract`, typed-data digests, and signatures differ.
 - Verification: `dart test test/eas/offchain_signer_test.dart -r expanded` passed with 18/18 tests.
+
+### [ID: ISSUE3_ALIAS_DOCS_AND_COVERAGE] -> Follows [ISSUE4_UID_PARITY_TEST_REFINEMENT]
+- Date: 2026-03-26
+- Event: Closed PR review gaps for dynamic-schema helper discoverability and alias-level negative coverage
+- Status: COMPLETED
+- Context: Added direct regression tests proving `signOffchainWithData()` and `buildAttestCallDataWithUserData()` surface `ArgumentError` on schema/userData key mismatches. Updated `README.md`, `doc/guides/reference-api.md`, and `doc/guides/how-to-wallet-onchain-transactions.md` to expose the new aliases as discoverability helpers for runtime-defined schemas and payload maps.
+- Verification: `dart test test/eas/abi_encoder_test.dart test/eas/offchain_signer_test.dart test/eas/onchain_client_test.dart` passed with 39/39 tests.
