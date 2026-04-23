@@ -676,7 +676,7 @@ Future<void> main() async {
 
   final filesToScan = <String>[
     'README.md',
-    ...Directory('docs/guides')
+    ...Directory('doc/guides')
         .listSync()
         .whereType<File>()
         .where((file) => file.path.endsWith('.md'))

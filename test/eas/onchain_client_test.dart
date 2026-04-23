@@ -132,6 +132,30 @@ void main() {
       expect(viaAlias, equals(viaPrimary));
     });
 
+    test(
+      'buildAttestCallDataWithUserData throws ArgumentError on schema key mismatch',
+      () {
+        final schema = SchemaDefinition(
+          fields: [SchemaField(type: 'uint256', name: 'timestamp')],
+        );
+        final lpPayload = LPPayload(
+          lpVersion: '1.0.0',
+          srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+          locationType: 'address',
+          location: 'test-location',
+        );
+
+        expect(
+          () => EASClient.buildAttestCallDataWithUserData(
+            schema: schema,
+            lpPayload: lpPayload,
+            userData: {'wrong_key': BigInt.from(1710000000)},
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+      },
+    );
+
     test('attest attempts RPC call (fails gracefully without network)', () {
       final client = EASClient(
         provider: DefaultRpcProvider(

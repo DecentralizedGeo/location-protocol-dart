@@ -137,6 +137,23 @@ void main() {
           expect(result.isValid, isTrue);
         },
       );
+
+      test(
+        'signOffchainWithData throws ArgumentError on schema key mismatch',
+        () async {
+          await expectLater(
+            signer.signOffchainWithData(
+              schema: schema,
+              lpPayload: lpPayload,
+              userData: {
+                'wrong_key': BigInt.from(1710000000),
+                'memo': 'Test mismatch',
+              },
+            ),
+            throwsA(isA<ArgumentError>()),
+          );
+        },
+      );
     });
 
     group('verifyOffchainAttestation', () {
