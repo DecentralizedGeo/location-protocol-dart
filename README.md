@@ -9,27 +9,28 @@
 
 ## Contents
 
+- [Contents](#contents)
 - [Description](#description)
 - [Library targets](#library-targets)
 - [Features](#features)
 - [How It Works](#how-it-works)
+  - [Location validation](#location-validation)
+  - [Location Protocol payloads](#location-protocol-payloads)
+  - [Schema composition](#schema-composition)
+  - [Offchain vs onchain](#offchain-vs-onchain)
 - [Supported Chains](#supported-chains)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Architecture](#architecture)
 - [Documentation](#documentation)
-- [Help & Contributing](#help--contributing)
+- [Help \& Contributing](#help--contributing)
 - [License](#license)
 
 ## Description
 
-`location_protocol` is a Dart library that implements the [Location Protocol](https://spec.decentralizedgeo.org/introduction/overview/) (LP) base data model and signing rules as an extensible framework you can layer onto your own data model. It follows the implementation‑agnostic Location Protocol specification to build LP–compliant, cryptographically verifiable location records that can be used on Ethereum and EVM‑compatible networks.
+`location_protocol` is a Dart implementation of the [Location Protocol](https://spec.decentralizedgeo.org/introduction/overview/), a standard for producing self-contained, cryptographically signed units of spatial data that extend your own data model. Location records can be signed offchain as EIP‑712 typed data or anchored on-chain through [EAS](https://docs.attest.org/docs/core--concepts/how-eas-works).
 
-In this reference implementation, LP payloads are embedded in [EAS (Ethereum Attestation Service)](https://docs.attest.org/docs/core--concepts/how-eas-works) attestations, giving you Ethereum‑style EIP‑712 signing and onchain anchoring while keeping the LP payload format portable to other runtimes that implement the same spec. The library covers the full lifecycle: location validation, payload construction, schema composition, ABI encoding, offchain signing, and onchain EAS operations.
-
-The library supports both offchain ([EIP‑712](https://eips.ethereum.org/EIPS/eip-712), no gas) and onchain ([EIP‑1559](https://eips.ethereum.org/EIPS/eip-1559)) attestations, giving you a flexible spectrum from fully local signatures to immutably anchored on‑chain records.
-
-This library provides the Dart equivalent of the signature service layer in the [Astral SDK](https://github.com/DecentralizedGeo/astral-sdk), adapted for mobile and multi‑platform Dart deployments. Pure Dart — no Flutter dependency; works in CLI, servers, Flutter apps, and all major compilation targets (web via JS/Wasm, Android, iOS, macOS, Windows, Linux).
+This is the Dart equivalent of the signature service layer in the [Astral SDK](https://github.com/DecentralizedGeo/astral-sdk), adapted for mobile and multi‑platform deployments.
 
 ---
 
@@ -61,30 +62,25 @@ This library is built with **Pure Dart** (no Flutter dependency). It is tested a
 
 ## How It Works
 
-### Location validation before signing
+### Location validation
 
-Before any cryptographic signing occurs, every `LPPayload` validates its `location` value against the declared `location_type`. This means invalid or malformed coordinates are caught at construction time — not silently embedded in a signed record. Consumers verifying the attestation can therefore trust both the cryptographic signature *and* the spatial integrity of the location data. You can also register custom validators to enforce domain-specific location constraints before records are signed.
+Every `LPPayload` validates its `location` value against the declared `location_type` at construction time. Invalid coordinates are caught before signing — not silently embedded in a record. Custom validators can be registered via `LocationValidator.register()` for domain-specific constraints.
 
 ### Location Protocol payloads
 
-Every attestation carries 4 base fields — `lp_version`, `srs`, `location_type`, and `location` — that come from the Location Protocol base data model and guarantee spatial interoperability across any schema and consumer. These fields are defined by the [LP base data model spec](https://spec.decentralizedgeo.org/specification/data-model/), and in this reference implementation they are wrapped inside an EAS attestation envelope without changing the LP payload format itself. The `LPPayload` class enforces them on construction: you cannot accidentally omit or misspell them. Location values are validated against canonical formats and serialized to strings by `LocationSerializer` before being encoded into the EAS payload.
+Every attestation carries 4 required LP base fields — `lp_version`, `srs`, `location_type`, and `location` — as defined by the [LP base data model spec](https://spec.decentralizedgeo.org/specification/data-model/). `LPPayload` enforces these on construction and serializes location values via `LocationSerializer` before ABI encoding.
 
-### Building LP-compliant records on your data model
+### Schema composition
 
-You define your existing business fields (e.g., `uint256 timestamp`, `string memo`) as a list of `SchemaField` objects. `SchemaDefinition` accepts those fields and automatically prepends the 4 LP base fields, producing a fully LP-compliant EAS schema string. This means you extend your data model — not replace it — while gaining LP interoperability and cryptographic verifiability by construct
-
-
-### EAS schemas and attestations
-
-[EAS](https://docs.attest.org/docs/core--concepts/how-eas-works) structures attestations around ABI-encoded schemas identified by deterministic UIDs. A schema must be registered on-chain before it can be used for on-chain attestations; the UID is derived from `keccak256(schemaString, resolverAddress, revocable)`. This library computes that UID locally via `SchemaUID.computeSchemaUID(...)`, letting you predict and cache schema UIDs without any RPC calls.
-
-### Schema-agnostic design
-
-You define your business fields (e.g., `uint256 timestamp`, `string memo`) as a list of `SchemaField` objects. `SchemaDefinition` accepts those fields and automatically prepends the 4 LP base fields, producing a fully LP-compliant EAS schema string. This prevents accidental naming conflicts with LP fields and ensures every attestation you create is interoperable with any LP-aware indexer or verifier.
+Define your business-specific fields as `SchemaField` objects. `SchemaDefinition` automatically prepends the 4 LP base fields, producing a fully LP-compliant EAS schema string. You extend your data model — you don't replace it. Schema UIDs are computed locally via `SchemaUID.computeSchemaUID(...)` without any RPC calls.
 
 ### Offchain vs onchain
 
-Offchain attestations are [EIP-712](https://eips.ethereum.org/EIPS/eip-712) signed locally — zero gas cost, immediately portable, and verifiable by any Ethereum wallet or EAS SDK. Onchain attestations write the encoded attestation to the EAS contract on-chain, providing maximum immutability. A lightweight middle path is to sign offchain and then call `EASClient.timestamp()` to anchor the offchain UID on-chain — immutable proof of existence without storing the payload on-chain.
+Offchain attestations are [EIP-712](https://eips.ethereum.org/EIPS/eip-712) typed data structures, signed locally.  They are gas-free, cryptographically verifiable by any wallet or the EAS SDK, and their authenticity is derived from the digital signature.
+
+Onchain attestations are submitted to the EAS contract.  This contract acts as the enforcement layer, validating the data against a schema from the [Schema Registry contract](https://docs.attest.org/docs/core--concepts/schemas#how-schemas-are-made) and executing any custom logic defined in an attached [Resolver contract](https://docs.attest.org/docs/core--concepts/resolver-contracts) before permanently storing the attestation on the blockchain.
+
+A hybrid approach that combines the benefits of both offchain (no gas, instant, portable) and onchain (immutable, discoverable) is to sign offchain and then submit an onchain attestation. This onchain transaction [records the current block timestamp](https://docs.attest.org/docs/tutorials/timestamping-attestations), providing an immutable, verifiable proof that the attestation (and its data) existed at least by that time.
 
 ---
 
@@ -244,4 +240,4 @@ flowchart TD
 
 ## License
 
-MIT © DecentralizedGeo contributors. See [LICENSE](LICENSE) for details.
+BSD 3-Clause © DecentralizedGeo contributors. See [LICENSE](LICENSE) for details.
