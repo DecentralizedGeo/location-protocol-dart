@@ -17,7 +17,7 @@ void main() {
     final sepoliaRpcUrl = env['SEPOLIA_RPC_URL'] ?? '';
     final sepoliaPrivateKey = env['SEPOLIA_PRIVATE_KEY'] ?? '';
 
-    test('Quick Start (L121)', () async {
+    test('Quick Start (L117)', () async {
       if (sepoliaRpcUrl.isEmpty || sepoliaPrivateKey.isEmpty) {
         markTestSkipped('Missing SEPOLIA_RPC_URL or SEPOLIA_PRIVATE_KEY in .env');
         return;
@@ -60,8 +60,7 @@ void main() {
         );
 
         // 4. Sign the attestation offchain (EIP-712 typed data, no RPC needed).
-        //    Use signOffchainWithData() when your schema and userData are assembled at runtime.
-        final signed = await signer.signOffchainWithData(
+        final signed = await signer.signOffchainAttestation(
           schema: schema,
           lpPayload: payload,
           userData: {
@@ -198,21 +197,6 @@ void main() {
               chainId: chainId,
             );
 
-            // Prerequisites from tutorial (schema + LP payload)
-            final schema = SchemaDefinition(
-              fields: [
-                SchemaField(type: 'uint256', name: 'timestamp'),
-                SchemaField(type: 'string', name: 'memo'),
-              ],
-            );
-
-            final lpPayload = LPPayload(
-              lpVersion: '1.0.0',
-              srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
-              locationType: 'geojson-point',
-              location: {'type': 'Point', 'coordinates': [-103.771556, 44.967243]},
-            );
-
             final schema = SchemaDefinition(
               fields: [
                 SchemaField(type: 'uint256', name: 'timestamp'),
@@ -251,21 +235,6 @@ void main() {
               rpcUrl: sepoliaRpcUrl,
               privateKeyHex: sepoliaPrivateKey,
               chainId: chainId,
-            );
-
-            // Prerequisites from tutorial (schema + LP payload)
-            final schema = SchemaDefinition(
-              fields: [
-                SchemaField(type: 'uint256', name: 'timestamp'),
-                SchemaField(type: 'string', name: 'memo'),
-              ],
-            );
-
-            final lpPayload = LPPayload(
-              lpVersion: '1.0.0',
-              srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
-              locationType: 'geojson-point',
-              location: {'type': 'Point', 'coordinates': [-103.771556, 44.967243]},
             );
 
             final schema = SchemaDefinition(
@@ -317,41 +286,6 @@ void main() {
               rpcUrl: sepoliaRpcUrl,
               privateKeyHex: sepoliaPrivateKey,
               chainId: chainId,
-            );
-
-            // Prerequisites from tutorial (schema + LP payload)
-            final schema = SchemaDefinition(
-              fields: [
-                SchemaField(type: 'uint256', name: 'timestamp'),
-                SchemaField(type: 'string', name: 'memo'),
-              ],
-            );
-
-            final lpPayload = LPPayload(
-              lpVersion: '1.0.0',
-              srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
-              locationType: 'geojson-point',
-              location: {'type': 'Point', 'coordinates': [-103.771556, 44.967243]},
-            );
-
-            // Offchain signing prerequisite for timestamp step
-            const testPrivateKey = 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
-
-            final easAddress = ChainConfig.forChainId(chainId)!.eas;
-
-            final signer = OffchainSigner.fromPrivateKey(
-              privateKeyHex: testPrivateKey,
-              chainId: chainId,
-              easContractAddress: easAddress,
-            );
-
-            final signed = await signer.signOffchainAttestation(
-              schema: schema,
-              lpPayload: lpPayload,
-              userData: {
-                'timestamp': BigInt.from(DateTime.now().millisecondsSinceEpoch ~/ 1000),
-                'memo': 'Prerequisite for timestamp test',
-              },
             );
 
             final schema = SchemaDefinition(
@@ -420,41 +354,6 @@ void main() {
               chainId: chainId,
             );
 
-            // Prerequisites from tutorial (schema + LP payload)
-            final schema = SchemaDefinition(
-              fields: [
-                SchemaField(type: 'uint256', name: 'timestamp'),
-                SchemaField(type: 'string', name: 'memo'),
-              ],
-            );
-
-            final lpPayload = LPPayload(
-              lpVersion: '1.0.0',
-              srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
-              locationType: 'geojson-point',
-              location: {'type': 'Point', 'coordinates': [-103.771556, 44.967243]},
-            );
-
-            // Offchain signing prerequisite for timestamp step
-            const testPrivateKey = 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
-
-            final easAddress = ChainConfig.forChainId(chainId)!.eas;
-
-            final signer = OffchainSigner.fromPrivateKey(
-              privateKeyHex: testPrivateKey,
-              chainId: chainId,
-              easContractAddress: easAddress,
-            );
-
-            final signed = await signer.signOffchainAttestation(
-              schema: schema,
-              lpPayload: lpPayload,
-              userData: {
-                'timestamp': BigInt.from(DateTime.now().millisecondsSinceEpoch ~/ 1000),
-                'memo': 'Prerequisite for timestamp test',
-              },
-            );
-
             final schema = SchemaDefinition(
               fields: [
                 SchemaField(type: 'uint256', name: 'timestamp'),
@@ -494,6 +393,26 @@ void main() {
             print('Attestation UID:   ${attestResult.uid}');
             print('Transaction hash:  ${attestResult.txHash}');
             print('Block number:      ${attestResult.blockNumber}');
+
+            // Offchain signing prerequisite for timestamp step
+            const testPrivateKey = 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+
+            final easAddress = ChainConfig.forChainId(chainId)!.eas;
+
+            final signer = OffchainSigner.fromPrivateKey(
+              privateKeyHex: testPrivateKey,
+              chainId: chainId,
+              easContractAddress: easAddress,
+            );
+
+            final signed = await signer.signOffchainAttestation(
+              schema: schema,
+              lpPayload: lpPayload,
+              userData: {
+                'timestamp': BigInt.from(DateTime.now().millisecondsSinceEpoch ~/ 1000),
+                'memo': 'Prerequisite for timestamp test',
+              },
+            );
 
             // Assumes `signed` is a SignedOffchainAttestation from OffchainSigner
             final timestampResult = await easClient.timestamp(signed.uid);
@@ -630,7 +549,15 @@ void main() {
 
     });
 
-    test('Other Onchain Operations (L93)', () async {
+    test('Other Onchain Operations (L94)', () async {
+      // Constants for example purposes only — replace with your own values
+      final schema = SchemaDefinition(
+        fields: [SchemaField(type: 'string', name: 'memo')],
+      );
+      const chainId = 11155111;
+      final schemaRegistryAddress = ChainConfig.forChainId(chainId)!.schemaRegistry;
+      const myWalletAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+
       // 1. Build the calldata offline (static method)
       final callData = SchemaRegistryClient.buildRegisterCallData(schema);
 
@@ -642,7 +569,14 @@ void main() {
       );
     });
 
-    test('Other Onchain Operations (L106)', () async {
+    test('Other Onchain Operations (L116)', () async {
+      // Constants for example purposes only — replace with your own values
+      const chainId = 11155111;
+      final easAddress = ChainConfig.forChainId(chainId)!.eas;
+      const myWalletAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+      const offchainUid = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
+
       // 1. Build the calldata offline (static method)
       final callData = EASClient.buildTimestampCallData(offchainUid);
 

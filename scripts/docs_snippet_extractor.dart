@@ -292,6 +292,60 @@ String stripTrailingCommentBlock(String code) {
   return lines.join('\n');
 }
 
+/// Injects prerequisites for wallet guide standalone snippets when needed.
+String injectWalletOnchainStandalonePrerequisites(
+  ExtractedSnippet snippet,
+  String code,
+) {
+  final fileName = snippet.sourceFile.split('/').last;
+  final isWalletOnchainStandalone =
+      fileName == 'how-to-wallet-onchain-transactions.md' &&
+      snippet.heading.contains('Other Onchain Operations');
+
+  if (!isWalletOnchainStandalone) {
+    return code;
+  }
+
+  final prelude = <String>[];
+  final hasChainId = code.contains('chainId =');
+
+  if (code.contains('buildRegisterCallData(schema)') &&
+      !code.contains('final schema = SchemaDefinition(')) {
+    prelude.add('''
+// Constants for example purposes only — replace with your own values
+final schema = SchemaDefinition(
+  fields: [SchemaField(type: 'string', name: 'memo')],
+);''');
+  }
+
+  if (code.contains('schemaRegistryAddress') &&
+      !code.contains('final schemaRegistryAddress =')) {
+    if (!hasChainId) {
+      prelude.add('const chainId = 11155111;');
+    }
+    prelude.add(
+      'final schemaRegistryAddress = ChainConfig.forChainId(chainId)!.schemaRegistry;',
+    );
+  }
+
+  if (code.contains('easAddress') && !code.contains('final easAddress =')) {
+    if (!hasChainId && !prelude.any((line) => line.contains('chainId ='))) {
+      prelude.add('const chainId = 11155111;');
+    }
+    prelude.add('final easAddress = ChainConfig.forChainId(chainId)!.eas;');
+  }
+
+  if (code.contains('myWalletAddress') && !code.contains('myWalletAddress =')) {
+    prelude.add("const myWalletAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';");
+  }
+
+  if (prelude.isEmpty) {
+    return code;
+  }
+
+  return '${prelude.join('\n')}\n\n$code';
+}
+
 /// Indents every line of [code] by [spaces] spaces.
 String indent(String code, int spaces) {
   final prefix = ' ' * spaces;
@@ -299,6 +353,12 @@ String indent(String code, int spaces) {
       .split('\n')
       .map((line) => line.isEmpty ? '' : '$prefix$line')
       .join('\n');
+}
+
+/// Returns true when code already defines tutorial `schema` and `lpPayload`.
+bool hasTutorialSchemaAndPayload(String code) {
+  return code.contains('final schema = SchemaDefinition(') &&
+      code.contains('final lpPayload = LPPayload(');
 }
 
 // ──────────────────────────────────────────────
@@ -395,6 +455,8 @@ String generateStandaloneTest(
     );
   }
 
+  code = injectWalletOnchainStandalonePrerequisites(snippet, code);
+
   final indented = indent(code, 6);
 
   final rpcGuard = requiresRpc
@@ -468,16 +530,25 @@ String generateStepSequenceTests(SnippetGroup group) {
     final testBody = StringBuffer();
 
     if (_filePrerequisites.containsKey(fileName) && i >= 1) {
+      final accumulatedWithoutStep1 = accumulatedBodies.skip(1).join('\n\n');
+      final needsTutorialPrerequisites =
+          !hasTutorialSchemaAndPayload(accumulatedWithoutStep1);
+
       testBody.writeln(accumulatedBodies.first);
       testBody.writeln();
-      testBody.writeln(_tutorialPrerequisites);
-      testBody.writeln();
-      if (i >= 3) {
-        testBody.writeln(_offchainSigningPrerequisite);
+
+      if (needsTutorialPrerequisites) {
+        testBody.writeln(_tutorialPrerequisites);
         testBody.writeln();
       }
-      for (final body in accumulatedBodies.skip(1)) {
-        testBody.writeln(body);
+
+      for (var bodyIndex = 1; bodyIndex < accumulatedBodies.length; bodyIndex++) {
+        if (i >= 4 && bodyIndex == accumulatedBodies.length - 1) {
+          testBody.writeln(_offchainSigningPrerequisite);
+          testBody.writeln();
+        }
+
+        testBody.writeln(accumulatedBodies[bodyIndex]);
         testBody.writeln();
       }
     } else {
