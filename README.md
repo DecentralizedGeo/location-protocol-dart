@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 [![CI](https://img.shields.io/badge/CI-passing-brightgreen)](https://github.com/DecentralizedGeo/location-protocol-dart/actions)
 
-> Dart library for building cryptographically verifiable, Location Protocol compliant records on top of your own data model.
+Dart library for building cryptographically verifiable, Location Protocol compliant records on top of your own data model.
 
 ---
 
