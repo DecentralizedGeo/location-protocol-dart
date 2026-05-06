@@ -1,7 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:blockchain_utils/blockchain_utils.dart';
-
 import '../lp/lp_payload.dart';
 import '../schema/schema_definition.dart';
 import '../config/chain_config.dart';
@@ -30,16 +28,16 @@ class EASClient {
   final RpcProvider provider;
   final String? _easAddress;
 
-  EASClient({
-    required this.provider,
-    String? easAddress,
-  }) : _easAddress = easAddress;
+  EASClient({required this.provider, String? easAddress})
+    : _easAddress = easAddress;
 
   /// The EAS contract address for this chain.
   String get easAddress {
     if (_easAddress != null) return _easAddress;
     final config = ChainConfig.forChainId(provider.chainId);
-    if (config == null) throw StateError('No EAS address for chainId ${provider.chainId}.');
+    if (config == null) {
+      throw StateError('No EAS address for chainId ${provider.chainId}.');
+    }
     return config.eas;
   }
 
@@ -92,13 +90,36 @@ class EASClient {
           ref.toBytes(),
           encodedData,
           BigInt.zero, // transaction value in request data, usually 0
-        ]
-      ]
+        ],
+      ],
     ]);
 
     return Uint8List.fromList(encoded);
   }
 
+  /// Builds ABI-encoded call data for `EAS.attest(AttestationRequest)` using
+  /// an explicit dynamic user-data map.
+  ///
+  /// This is a convenience alias for [buildAttestCallData] that better matches
+  /// downstream app flows where schemas and payload fields are created at
+  /// runtime.
+  static Uint8List buildAttestCallDataWithUserData({
+    required SchemaDefinition schema,
+    required LPPayload lpPayload,
+    required Map<String, dynamic> userData,
+    String recipient = EASConstants.zeroAddress,
+    BigInt? expirationTime,
+    String? refUID,
+  }) {
+    return buildAttestCallData(
+      schema: schema,
+      lpPayload: lpPayload,
+      userData: userData,
+      recipient: recipient,
+      expirationTime: expirationTime,
+      refUID: refUID,
+    );
+  }
 
   /// Submit an onchain attestation.
   ///
@@ -242,8 +263,12 @@ class EASClient {
       params: [uid.toBytes()],
     );
 
-    if (result.isEmpty || result[0] is! List || (result[0] as List).length < 10) return null;
-    
+    if (result.isEmpty ||
+        result[0] is! List ||
+        (result[0] as List).length < 10) {
+      return null;
+    }
+
     final attestation = Attestation.fromTuple(result[0] as List<dynamic>);
     if (attestation.uid == EASConstants.zeroBytes32) return null;
     return attestation;
@@ -251,9 +276,7 @@ class EASClient {
 
   /// Register a schema on-chain. Convenience wrapper around [SchemaRegistryClient].
   Future<RegisterResult> registerSchema(SchemaDefinition schema) async {
-    final registry = SchemaRegistryClient(
-      provider: provider,
-    );
+    final registry = SchemaRegistryClient(provider: provider);
     return registry.register(schema);
   }
 }

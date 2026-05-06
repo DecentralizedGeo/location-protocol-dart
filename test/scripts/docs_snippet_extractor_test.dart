@@ -321,6 +321,116 @@ void main() async {
       expect(generated, contains('final lpPayload = LPPayload'));
     });
 
+    test(
+      'generateStepSequenceTests avoids duplicating schema prerequisites for onchain guide steps',
+      () {
+        final group = SnippetGroup(
+          sourceFile: 'doc/guides/how-to-register-and-attest-onchain.md',
+          groupName: 'how-to-register-and-attest-onchain',
+          snippets: [
+            ExtractedSnippet(
+              sourceFile: 'doc/guides/how-to-register-and-attest-onchain.md',
+              lineNumber: 46,
+              heading: 'Step 1 — Set up your RPC provider',
+              code: '''
+void main() async {
+  final provider = DefaultRpcProvider(
+    rpcUrl: rpcUrl,
+    privateKeyHex: privateKey,
+    chainId: chainId,
+  );
+}
+''',
+            ),
+            ExtractedSnippet(
+              sourceFile: 'doc/guides/how-to-register-and-attest-onchain.md',
+              lineNumber: 74,
+              heading: 'Step 2 — Define your schema and LP payload',
+              code: '''
+final schema = SchemaDefinition(fields: []);
+final lpPayload = LPPayload(
+  lpVersion: '1.0.0',
+  srs: 'x',
+  locationType: 'address',
+  location: 'y',
+);
+''',
+            ),
+          ],
+          stepSequence: [
+            ExtractedSnippet(
+              sourceFile: 'doc/guides/how-to-register-and-attest-onchain.md',
+              lineNumber: 46,
+              heading: 'Step 1 — Set up your RPC provider',
+              code: '''
+void main() async {
+  final provider = DefaultRpcProvider(
+    rpcUrl: rpcUrl,
+    privateKeyHex: privateKey,
+    chainId: chainId,
+  );
+}
+''',
+            ),
+            ExtractedSnippet(
+              sourceFile: 'doc/guides/how-to-register-and-attest-onchain.md',
+              lineNumber: 74,
+              heading: 'Step 2 — Define your schema and LP payload',
+              code: '''
+final schema = SchemaDefinition(fields: []);
+final lpPayload = LPPayload(
+  lpVersion: '1.0.0',
+  srs: 'x',
+  locationType: 'address',
+  location: 'y',
+);
+''',
+            ),
+          ],
+          standaloneSnippets: const [],
+          errorExamples: const [],
+          requiresRpc: true,
+          requiresTearDown: false,
+        );
+
+        final generated = generateStepSequenceTests(group);
+
+        expect(
+          RegExp(r'final schema = SchemaDefinition').allMatches(generated),
+          hasLength(1),
+        );
+        expect(
+          RegExp(r'final lpPayload = LPPayload').allMatches(generated),
+          hasLength(1),
+        );
+      },
+    );
+
+    test(
+      'generateStandaloneTest injects wallet prerequisites for other onchain operations snippets',
+      () {
+        final snippet = ExtractedSnippet(
+          sourceFile: 'doc/guides/how-to-wallet-onchain-transactions.md',
+          lineNumber: 93,
+          heading: 'Other Onchain Operations',
+          code: '''
+final callData = SchemaRegistryClient.buildRegisterCallData(schema);
+final txRequest = TxUtils.buildTxRequest(
+  to: schemaRegistryAddress,
+  data: callData,
+  from: myWalletAddress,
+);
+''',
+        );
+
+        final generated = generateStandaloneTest(snippet);
+
+        expect(generated, contains('final schema = SchemaDefinition('));
+        expect(generated, contains('final schemaRegistryAddress ='));
+        expect(generated, contains("const myWalletAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';"));
+      },
+    );
+
     test('generateErrorExampleTests wraps snippets with ArgumentError expectation', () {
       final snippets = [
         ExtractedSnippet(

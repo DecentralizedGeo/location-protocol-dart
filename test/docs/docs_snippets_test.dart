@@ -17,7 +17,7 @@ void main() {
     final sepoliaRpcUrl = env['SEPOLIA_RPC_URL'] ?? '';
     final sepoliaPrivateKey = env['SEPOLIA_PRIVATE_KEY'] ?? '';
 
-    test('Quick Start (L94)', () async {
+    test('Quick Start (L117)', () async {
       if (sepoliaRpcUrl.isEmpty || sepoliaPrivateKey.isEmpty) {
         markTestSkipped('Missing SEPOLIA_RPC_URL or SEPOLIA_PRIVATE_KEY in .env');
         return;
@@ -27,7 +27,7 @@ void main() {
     final privateKey = sepoliaPrivateKey;
 
       try {
-      
+
         // 1. Define a schema with business-specific fields.
         //    LP base fields (lp_version, srs, location_type, location) are prepended automatically.
         final schema = SchemaDefinition(fields: [
@@ -35,11 +35,11 @@ void main() {
           SchemaField(type: 'string', name: 'memo'),
           SchemaField(type: 'address', name: 'observer'),
         ]);
-      
+
         // Print the full EAS schema string (LP fields + your fields)
         print(schema.toEASSchemaString());
         // => string lp_version,string srs,string location_type,string location,uint256 observedAt,string memo,address observer
-      
+
         // 2. Create an LP payload with a GeoJSON point location.
         final payload = LPPayload(
           lpVersion: '0.1.0',
@@ -47,18 +47,18 @@ void main() {
           locationType: 'geojson-point',
           location: {'type': 'Point', 'coordinates': [-122.4194, 37.7749]},
         );
-      
+
         // 3. Create an OffchainSigner targeting Sepolia.
         //    Replace with a real private key; never commit secrets.
         const privateKeyHex = 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'; // 64 hex chars, no 0x prefix
         final addresses = ChainConfig.forChainId(11155111)!; // Sepolia
-      
+
         final signer = OffchainSigner.fromPrivateKey(
           privateKeyHex: privateKeyHex,
           chainId: 11155111,
           easContractAddress: addresses.eas,
         );
-      
+
         // 4. Sign the attestation offchain (EIP-712 typed data, no RPC needed).
         final signed = await signer.signOffchainAttestation(
           schema: schema,
@@ -69,10 +69,10 @@ void main() {
             'observer': signer.signerAddress,
           },
         );
-      
+
         print('UID: ${signed.uid}');
         print('Signer: ${signed.signer}');
-      
+
         // 5. Verify the signed attestation locally.
         final result = signer.verifyOffchainAttestation(signed);
         assert(result.isValid, 'Attestation verification failed: ${result.reason}');
@@ -180,7 +180,7 @@ void main() {
         }
       });
 
-      test('Step 2 — Register the schema (L87)', () async {
+      test('Step 2 — Define your schema and LP payload (L89)', () async {
         if (sepoliaRpcUrl.isEmpty || sepoliaPrivateKey.isEmpty) {
           markTestSkipped('Missing SEPOLIA_RPC_URL or SEPOLIA_PRIVATE_KEY in .env');
           return;
@@ -197,7 +197,46 @@ void main() {
               chainId: chainId,
             );
 
-            // Prerequisites from tutorial (schema + LP payload)
+            final schema = SchemaDefinition(
+              fields: [
+                SchemaField(type: 'uint256', name: 'timestamp'),
+                SchemaField(type: 'string', name: 'memo'),
+              ],
+            );
+
+            final lpPayload = LPPayload(
+              lpVersion: '1.0.0',
+              srs: 'http://www.opengis.net/def/crs/OGC/1.3/CRS84',
+              locationType: 'geojson-point',
+              location: {'type': 'Point', 'coordinates': [-103.771556, 44.967243]},
+            );
+        } catch (error) {
+          final message = error.toString().toLowerCase();
+          if (message.contains('already known')) {
+            markTestSkipped('Skipping flaky Sepolia mempool duplicate transaction.');
+            return;
+          }
+          rethrow;
+        }
+      });
+
+      test('Step 3 — Register the schema (L111)', () async {
+        if (sepoliaRpcUrl.isEmpty || sepoliaPrivateKey.isEmpty) {
+          markTestSkipped('Missing SEPOLIA_RPC_URL or SEPOLIA_PRIVATE_KEY in .env');
+          return;
+        }
+
+        try {
+            // Adapted from doc snippet: uses loadDotEnv() instead of Platform.environment.
+            // Doc uses EAS_RPC_URL/EAS_PRIVATE_KEY; tests use SEPOLIA_RPC_URL/SEPOLIA_PRIVATE_KEY.
+            const chainId = 11155111; // Sepolia
+
+            final provider = DefaultRpcProvider(
+              rpcUrl: sepoliaRpcUrl,
+              privateKeyHex: sepoliaPrivateKey,
+              chainId: chainId,
+            );
+
             final schema = SchemaDefinition(
               fields: [
                 SchemaField(type: 'uint256', name: 'timestamp'),
@@ -232,7 +271,7 @@ void main() {
         }
       });
 
-      test('Step 3 — Attest onchain (L116)', () async {
+      test('Step 4 — Attest onchain (L140)', () async {
         if (sepoliaRpcUrl.isEmpty || sepoliaPrivateKey.isEmpty) {
           markTestSkipped('Missing SEPOLIA_RPC_URL or SEPOLIA_PRIVATE_KEY in .env');
           return;
@@ -249,7 +288,6 @@ void main() {
               chainId: chainId,
             );
 
-            // Prerequisites from tutorial (schema + LP payload)
             final schema = SchemaDefinition(
               fields: [
                 SchemaField(type: 'uint256', name: 'timestamp'),
@@ -299,7 +337,7 @@ void main() {
         }
       });
 
-      test('Step 4 — (Optional) Timestamp an offchain attestation (L143)', () async {
+      test('Step 5 — (Optional) Timestamp an offchain attestation (L167)', () async {
         if (sepoliaRpcUrl.isEmpty || sepoliaPrivateKey.isEmpty) {
           markTestSkipped('Missing SEPOLIA_RPC_URL or SEPOLIA_PRIVATE_KEY in .env');
           return;
@@ -316,7 +354,6 @@ void main() {
               chainId: chainId,
             );
 
-            // Prerequisites from tutorial (schema + LP payload)
             final schema = SchemaDefinition(
               fields: [
                 SchemaField(type: 'uint256', name: 'timestamp'),
@@ -330,6 +367,32 @@ void main() {
               locationType: 'geojson-point',
               location: {'type': 'Point', 'coordinates': [-103.771556, 44.967243]},
             );
+
+            final registryClient = SchemaRegistryClient(provider: provider);
+
+            // Compute the UID locally before registering
+            final expectedUID = SchemaRegistryClient.computeSchemaUID(schema);
+            print('Expected schema UID: $expectedUID');
+
+            // Register on-chain (or reuse an existing UID if already registered)
+            final registerResult = await registryClient.register(schema);
+            print('Schema registered: ${registerResult.uid}');
+            print('Transaction: ${registerResult.txHash}');
+
+            final easClient = EASClient(provider: provider);
+
+            final attestResult = await easClient.attest(
+              schema: schema,
+              lpPayload: lpPayload,
+              userData: {
+                'timestamp': BigInt.from(DateTime.now().millisecondsSinceEpoch ~/ 1000),
+                'memo': 'Onchain field survey checkpoint',
+              },
+            );
+
+            print('Attestation UID:   ${attestResult.uid}');
+            print('Transaction hash:  ${attestResult.txHash}');
+            print('Block number:      ${attestResult.blockNumber}');
 
             // Offchain signing prerequisite for timestamp step
             const testPrivateKey = 'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
@@ -351,32 +414,6 @@ void main() {
               },
             );
 
-            final registryClient = SchemaRegistryClient(provider: provider);
-
-            // Compute the UID locally before registering
-            final expectedUID = SchemaRegistryClient.computeSchemaUID(schema);
-            print('Expected schema UID: $expectedUID');
-
-            // Register on-chain (or reuse an existing UID if already registered)
-            final registerResult = await registryClient.register(schema);
-            print('Schema registered: ${registerResult.uid}');
-            print('Transaction: ${registerResult.txHash}');
-
-            final easClient = EASClient(provider: provider);
-
-            final attestResult = await easClient.attest(
-              schema: schema,
-              lpPayload: lpPayload,
-              userData: {
-                'timestamp': BigInt.from(DateTime.now().millisecondsSinceEpoch ~/ 1000),
-                'memo': 'Onchain field survey checkpoint',
-              },
-            );
-
-            print('Attestation UID:   ${attestResult.uid}');
-            print('Transaction hash:  ${attestResult.txHash}');
-            print('Block number:      ${attestResult.blockNumber}');
-
             // Assumes `signed` is a SignedOffchainAttestation from OffchainSigner
             final timestampResult = await easClient.timestamp(signed.uid);
 
@@ -397,7 +434,7 @@ void main() {
 
   });
 
-  group('how-to-wallet-onchain-attest', () {
+  group('how-to-wallet-onchain-transactions', () {
     group('Step sequence', () {
       test('Step 1 — Build the ABI-encoded calldata (L20)', () async {
 
@@ -412,7 +449,7 @@ void main() {
             location: {'type': 'Point', 'coordinates': [-73.9857, 40.7484]},
           );
 
-          final callData = EASClient.buildAttestCallData(
+          final callData = EASClient.buildAttestCallDataWithUserData(
             schema: schema,
             lpPayload: lpPayload,
             userData: {'memo': 'My attestation'},
@@ -434,7 +471,7 @@ void main() {
             location: {'type': 'Point', 'coordinates': [-73.9857, 40.7484]},
           );
 
-          final callData = EASClient.buildAttestCallData(
+          final callData = EASClient.buildAttestCallDataWithUserData(
             schema: schema,
             lpPayload: lpPayload,
             userData: {'memo': 'My attestation'},
@@ -476,7 +513,7 @@ void main() {
             location: {'type': 'Point', 'coordinates': [-73.9857, 40.7484]},
           );
 
-          final callData = EASClient.buildAttestCallData(
+          final callData = EASClient.buildAttestCallDataWithUserData(
             schema: schema,
             lpPayload: lpPayload,
             userData: {'memo': 'My attestation'},
@@ -510,6 +547,45 @@ void main() {
           print('Transaction request ready: $txRequest');
       });
 
+    });
+
+    test('Other Onchain Operations (L94)', () async {
+      // Constants for example purposes only — replace with your own values
+      final schema = SchemaDefinition(
+        fields: [SchemaField(type: 'string', name: 'memo')],
+      );
+      const chainId = 11155111;
+      final schemaRegistryAddress = ChainConfig.forChainId(chainId)!.schemaRegistry;
+      const myWalletAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+
+      // 1. Build the calldata offline (static method)
+      final callData = SchemaRegistryClient.buildRegisterCallData(schema);
+
+      // 2. Build the transaction request targeting the Registry
+      final txRequest = TxUtils.buildTxRequest(
+        to: schemaRegistryAddress, 
+        data: callData,
+        from: myWalletAddress, 
+      );
+    });
+
+    test('Other Onchain Operations (L116)', () async {
+      // Constants for example purposes only — replace with your own values
+      const chainId = 11155111;
+      final easAddress = ChainConfig.forChainId(chainId)!.eas;
+      const myWalletAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+      const offchainUid = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
+
+      // 1. Build the calldata offline (static method)
+      final callData = EASClient.buildTimestampCallData(offchainUid);
+
+      // 2. Build the transaction request targeting EAS
+      final txRequest = TxUtils.buildTxRequest(
+        to: easAddress, 
+        data: callData,
+        from: myWalletAddress, 
+      );
     });
 
   });
@@ -549,7 +625,7 @@ void main() {
   group('tutorial-first-attestation', () {
     group('Step sequence', () {
       test('Step 1 — Define your schema (L46)', () async {
-        
+
           // Define your business schema
           // LP base fields (lp_version, srs, location_type, location) are auto-prepended
           final schema = SchemaDefinition(
@@ -558,13 +634,13 @@ void main() {
               SchemaField(type: 'string', name: 'memo'),
             ],
           );
-        
+
           print(schema.toEASSchemaString());
           // => "string lp_version,string srs,string location_type,string location,uint256 timestamp,string memo"
       });
 
       test('Step 2 — Create an LP payload (L80)', () async {
-        
+
           // Define your business schema
           // LP base fields (lp_version, srs, location_type, location) are auto-prepended
           final schema = SchemaDefinition(
@@ -573,7 +649,7 @@ void main() {
               SchemaField(type: 'string', name: 'memo'),
             ],
           );
-        
+
           print(schema.toEASSchemaString());
           // => "string lp_version,string srs,string location_type,string location,uint256 timestamp,string memo"
 
@@ -584,14 +660,14 @@ void main() {
             locationType: 'geojson-point',
             location: {'type': 'Point', 'coordinates': [-103.771556, 44.967243]},
           );
-        
+
           print('Location type: ${lpPayload.locationType}');
           print('Location: ${lpPayload.location}');
           // If LPPayload construction succeeds, all 4 fields are valid.
       });
 
       test('Step 3 — Sign the attestation offchain (L109)', () async {
-        
+
           // Define your business schema
           // LP base fields (lp_version, srs, location_type, location) are auto-prepended
           final schema = SchemaDefinition(
@@ -600,7 +676,7 @@ void main() {
               SchemaField(type: 'string', name: 'memo'),
             ],
           );
-        
+
           print(schema.toEASSchemaString());
           // => "string lp_version,string srs,string location_type,string location,uint256 timestamp,string memo"
 
@@ -611,7 +687,7 @@ void main() {
             locationType: 'geojson-point',
             location: {'type': 'Point', 'coordinates': [-103.771556, 44.967243]},
           );
-        
+
           print('Location type: ${lpPayload.locationType}');
           print('Location: ${lpPayload.location}');
           // If LPPayload construction succeeds, all 4 fields are valid.
@@ -619,15 +695,15 @@ void main() {
           // A test private key — NEVER use a real key in source code
           const testPrivateKey = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
           const chainId = 11155111; // Sepolia
-        
+
           final easAddress = ChainConfig.forChainId(chainId)!.eas;
-        
+
           final signer = OffchainSigner.fromPrivateKey(
             privateKeyHex: testPrivateKey,
             chainId: chainId,
             easContractAddress: easAddress,
           );
-        
+
           final signed = await signer.signOffchainAttestation(
             schema: schema,
             lpPayload: lpPayload,
@@ -636,13 +712,13 @@ void main() {
               'memo': 'Tutorial checkpoint',
             },
           );
-        
+
           print('Attestation UID: ${signed.uid}');
           print('Signer:          ${signed.signer}');
       });
 
       test('Step 4 — Verify the attestation (L150)', () async {
-        
+
           // Define your business schema
           // LP base fields (lp_version, srs, location_type, location) are auto-prepended
           final schema = SchemaDefinition(
@@ -651,7 +727,7 @@ void main() {
               SchemaField(type: 'string', name: 'memo'),
             ],
           );
-        
+
           print(schema.toEASSchemaString());
           // => "string lp_version,string srs,string location_type,string location,uint256 timestamp,string memo"
 
@@ -662,7 +738,7 @@ void main() {
             locationType: 'geojson-point',
             location: {'type': 'Point', 'coordinates': [-103.771556, 44.967243]},
           );
-        
+
           print('Location type: ${lpPayload.locationType}');
           print('Location: ${lpPayload.location}');
           // If LPPayload construction succeeds, all 4 fields are valid.
@@ -670,15 +746,15 @@ void main() {
           // A test private key — NEVER use a real key in source code
           const testPrivateKey = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
           const chainId = 11155111; // Sepolia
-        
+
           final easAddress = ChainConfig.forChainId(chainId)!.eas;
-        
+
           final signer = OffchainSigner.fromPrivateKey(
             privateKeyHex: testPrivateKey,
             chainId: chainId,
             easContractAddress: easAddress,
           );
-        
+
           final signed = await signer.signOffchainAttestation(
             schema: schema,
             lpPayload: lpPayload,
@@ -687,15 +763,15 @@ void main() {
               'memo': 'Tutorial checkpoint',
             },
           );
-        
+
           print('Attestation UID: ${signed.uid}');
           print('Signer:          ${signed.signer}');
 
           final result = signer.verifyOffchainAttestation(signed);
-        
+
           print('Valid:            ${result.isValid}');
           print('Recovered signer: ${result.recoveredAddress}');
-        
+
           // The recovered address should match the signer's address
           assert(result.isValid, 'Signature verification failed');
           assert(
@@ -705,7 +781,7 @@ void main() {
       });
 
       test('Step 5 — Inspect the signed attestation (L177)', () async {
-        
+
           // Define your business schema
           // LP base fields (lp_version, srs, location_type, location) are auto-prepended
           final schema = SchemaDefinition(
@@ -714,7 +790,7 @@ void main() {
               SchemaField(type: 'string', name: 'memo'),
             ],
           );
-        
+
           print(schema.toEASSchemaString());
           // => "string lp_version,string srs,string location_type,string location,uint256 timestamp,string memo"
 
@@ -725,7 +801,7 @@ void main() {
             locationType: 'geojson-point',
             location: {'type': 'Point', 'coordinates': [-103.771556, 44.967243]},
           );
-        
+
           print('Location type: ${lpPayload.locationType}');
           print('Location: ${lpPayload.location}');
           // If LPPayload construction succeeds, all 4 fields are valid.
@@ -733,15 +809,15 @@ void main() {
           // A test private key — NEVER use a real key in source code
           const testPrivateKey = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
           const chainId = 11155111; // Sepolia
-        
+
           final easAddress = ChainConfig.forChainId(chainId)!.eas;
-        
+
           final signer = OffchainSigner.fromPrivateKey(
             privateKeyHex: testPrivateKey,
             chainId: chainId,
             easContractAddress: easAddress,
           );
-        
+
           final signed = await signer.signOffchainAttestation(
             schema: schema,
             lpPayload: lpPayload,
@@ -750,15 +826,15 @@ void main() {
               'memo': 'Tutorial checkpoint',
             },
           );
-        
+
           print('Attestation UID: ${signed.uid}');
           print('Signer:          ${signed.signer}');
 
           final result = signer.verifyOffchainAttestation(signed);
-        
+
           print('Valid:            ${result.isValid}');
           print('Recovered signer: ${result.recoveredAddress}');
-        
+
           // The recovered address should match the signer's address
           assert(result.isValid, 'Signature verification failed');
           assert(
@@ -778,7 +854,7 @@ void main() {
     });
 
     test('Complete program listing (L204)', () async {
-      
+
         // Step 1 — Define your schema
         // LP base fields (lp_version, srs, location_type, location) are auto-prepended
         final schema = SchemaDefinition(
@@ -787,10 +863,10 @@ void main() {
             SchemaField(type: 'string', name: 'memo'),
           ],
         );
-      
+
         print(schema.toEASSchemaString());
         // => "string lp_version,string srs,string location_type,string location,uint256 timestamp,string memo"
-      
+
         // Step 2 — Create the LP payload
         final lpPayload = LPPayload(
           lpVersion: '1.0.0',
@@ -798,23 +874,23 @@ void main() {
           locationType: 'geojson-point',
           location: {'type': 'Point', 'coordinates': [-103.771556, 44.967243]},
         );
-      
+
         print('Location type: ${lpPayload.locationType}');
         print('Location: ${lpPayload.location}');
-      
+
         // Step 3 — Sign the attestation offchain
         // A test private key — NEVER use a real key in source code
         const testPrivateKey = '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
         const chainId = 11155111; // Sepolia
-      
+
         final easAddress = ChainConfig.forChainId(chainId)!.eas;
-      
+
         final signer = OffchainSigner.fromPrivateKey(
           privateKeyHex: testPrivateKey,
           chainId: chainId,
           easContractAddress: easAddress,
         );
-      
+
         final signed = await signer.signOffchainAttestation(
           schema: schema,
           lpPayload: lpPayload,
@@ -823,22 +899,22 @@ void main() {
             'memo': 'Tutorial checkpoint',
           },
         );
-      
+
         print('Attestation UID: ${signed.uid}');
         print('Signer:          ${signed.signer}');
-      
+
         // Step 4 — Verify the attestation
         final result = signer.verifyOffchainAttestation(signed);
-      
+
         print('Valid:            ${result.isValid}');
         print('Recovered signer: ${result.recoveredAddress}');
-      
+
         assert(result.isValid, 'Signature verification failed');
         assert(
           result.recoveredAddress.toLowerCase() == signer.signerAddress.toLowerCase(),
           'Recovered address mismatch',
         );
-      
+
         // Step 5 — Inspect the signed attestation
         print('Schema UID: ${signed.schemaUID}');
         print('Version:    ${signed.version}');

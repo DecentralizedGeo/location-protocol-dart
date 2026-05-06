@@ -30,13 +30,17 @@ void main() {
   }
 
   group('Sepolia Onchain Operations', skip: skipReason, () {
-    final provider = DefaultRpcProvider(
-      rpcUrl: rpcUrl!,
-      privateKeyHex: privateKey!,
-      chainId: 11155111,
-    );
+    late final DefaultRpcProvider provider;
+    late final SchemaRegistryClient registry;
 
-    final registry = SchemaRegistryClient(provider: provider);
+    setUpAll(() {
+      provider = DefaultRpcProvider(
+        rpcUrl: rpcUrl!,
+        privateKeyHex: privateKey!,
+        chainId: 11155111,
+      );
+      registry = SchemaRegistryClient(provider: provider);
+    });
 
     test('configured schema UID exists on Sepolia', () async {
       final schema = await registry.getSchema(existingSchemaUid!);
