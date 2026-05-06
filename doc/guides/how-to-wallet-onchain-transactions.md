@@ -89,7 +89,16 @@ Pass the transaction request map directly to your wallet SDK. The exact API vari
 The exact same two-step pipeline (`buildCallData` → `TxUtils.buildTxRequest`) works for the other onchain operations.
 
 **To Register a Schema via Wallet:**
+
 ```dart
+// Constants for example purposes only — replace with your own values
+final schema = SchemaDefinition(
+  fields: [SchemaField(type: 'string', name: 'memo')],
+);
+const chainId = 11155111;
+final schemaRegistryAddress = ChainConfig.forChainId(chainId)!.schemaRegistry;
+const myWalletAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+
 // 1. Build the calldata offline (static method)
 final callData = SchemaRegistryClient.buildRegisterCallData(schema);
 
@@ -102,7 +111,15 @@ final txRequest = TxUtils.buildTxRequest(
 ```
 
 **To Timestamp an Offchain UID via Wallet:**
+
 ```dart
+// Constants for example purposes only — replace with your own values
+const chainId = 11155111;
+final easAddress = ChainConfig.forChainId(chainId)!.eas;
+const myWalletAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+const offchainUid = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
+
 // 1. Build the calldata offline (static method)
 final callData = EASClient.buildTimestampCallData(offchainUid);
 
