@@ -15,7 +15,7 @@ import '../test_helpers/dotenv_loader.dart';
 
 void main() {
   final env = loadDotEnv();
-  final rpcUrl = env['SEPOLIA_RPC_URL'];
+  final rpcUrl = resolveRpcUrl(env);
   final privateKey = env['SEPOLIA_PRIVATE_KEY'];
   final existingSchemaUid = env['SEPOLIA_EXISTING_SCHEMA_UID'];
   final skipReason = _sepoliaSkipReason(
@@ -84,7 +84,13 @@ void main() {
       expect(result.uid, startsWith('0x'));
       expect(result.uid.length, equals(66));
 
-      final fetched = await client.getAttestation(result.uid);
+      // Retry up to 5 times with 3-second gaps — load-balanced RPC endpoints
+      // (Alchemy/Infura) may return stale state immediately after mining.
+      Attestation? fetched;
+      for (var attempt = 0; attempt < 5 && fetched == null; attempt++) {
+        if (attempt > 0) await Future.delayed(const Duration(seconds: 3));
+        fetched = await client.getAttestation(result.uid);
+      }
       expect(fetched, isNotNull);
 
       final attestation = fetched!;

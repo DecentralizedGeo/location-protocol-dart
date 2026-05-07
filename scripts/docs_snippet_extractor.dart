@@ -425,6 +425,7 @@ String generateFileHeader() {
 @Tags(['doc-snippets'])
 library;
 
+import 'dart:convert';
 import 'package:test/test.dart';
 import 'package:location_protocol/location_protocol.dart';
 

@@ -189,7 +189,7 @@ void main() {
         }
       });
 
-      test('Step 2 — Define your schema and LP payload (L89)', () async {
+      test('Step 2 — Define your schema and LP payload (L98)', () async {
         if (sepoliaRpcUrl.isEmpty || sepoliaPrivateKey.isEmpty) {
           markTestSkipped('Missing SEPOLIA_RPC_URL or SEPOLIA_PRIVATE_KEY in .env');
           return;
@@ -229,7 +229,7 @@ void main() {
         }
       });
 
-      test('Step 3 — Register the schema (L111)', () async {
+      test('Step 3 — Register the schema (L120)', () async {
         if (sepoliaRpcUrl.isEmpty || sepoliaPrivateKey.isEmpty) {
           markTestSkipped('Missing SEPOLIA_RPC_URL or SEPOLIA_PRIVATE_KEY in .env');
           return;
@@ -280,7 +280,7 @@ void main() {
         }
       });
 
-      test('Step 4 — Attest onchain (L140)', () async {
+      test('Step 4 — Attest onchain (L149)', () async {
         if (sepoliaRpcUrl.isEmpty || sepoliaPrivateKey.isEmpty) {
           markTestSkipped('Missing SEPOLIA_RPC_URL or SEPOLIA_PRIVATE_KEY in .env');
           return;
@@ -346,7 +346,7 @@ void main() {
         }
       });
 
-      test('Step 5 — (Optional) Timestamp an offchain attestation (L167)', () async {
+      test('Step 5 — (Optional) Timestamp an offchain attestation (L176)', () async {
         if (sepoliaRpcUrl.isEmpty || sepoliaPrivateKey.isEmpty) {
           markTestSkipped('Missing SEPOLIA_RPC_URL or SEPOLIA_PRIVATE_KEY in .env');
           return;
@@ -604,7 +604,7 @@ void main() {
     final sepoliaRpcUrl = env['SEPOLIA_RPC_URL'] ?? '';
     final sepoliaPrivateKey = env['SEPOLIA_PRIVATE_KEY'] ?? '';
 
-    test('Chain selection (L98)', () async {
+    test('Chain selection (L104)', () async {
       if (sepoliaRpcUrl.isEmpty || sepoliaPrivateKey.isEmpty) {
         markTestSkipped('Missing SEPOLIA_RPC_URL or SEPOLIA_PRIVATE_KEY in .env');
         return;
