@@ -104,4 +104,40 @@ void main() {
       expect(result.reason, equals('UID mismatch'));
     });
   });
+
+  group('VerificationFailure', () {
+    test('all expected codes exist', () {
+      const codes = VerificationFailure.values;
+      expect(codes, contains(VerificationFailure.uidMismatch));
+      expect(codes, contains(VerificationFailure.invalidDomain));
+      expect(codes, contains(VerificationFailure.invalidPrimaryType));
+      expect(codes, contains(VerificationFailure.invalidTypes));
+      expect(codes, contains(VerificationFailure.missingSalt));
+      expect(codes, contains(VerificationFailure.invalidSignature));
+      expect(codes, contains(VerificationFailure.signerMismatch));
+    });
+  });
+
+  group('VerificationResult with code', () {
+    test('valid result has null code', () {
+      const result = VerificationResult(
+        isValid: true,
+        recoveredAddress: '0xabc',
+      );
+      expect(result.isValid, isTrue);
+      expect(result.code, isNull);
+    });
+
+    test('invalid result can carry a code', () {
+      const result = VerificationResult(
+        isValid: false,
+        recoveredAddress: '',
+        code: VerificationFailure.uidMismatch,
+        reason: 'UID mismatch',
+      );
+      expect(result.isValid, isFalse);
+      expect(result.code, equals(VerificationFailure.uidMismatch));
+      expect(result.reason, contains('UID'));
+    });
+  });
 }
