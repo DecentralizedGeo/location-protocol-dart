@@ -183,6 +183,38 @@ void main() {
           equals(signed.signer.toLowerCase()),
         );
       });
+
+      test(
+        'accepts cross-tool attestation with different domain version (mirrors strict=false)',
+        () async {
+          // Sign with easVersion='0.26' — simulating an attestation produced by
+          // a different EAS SDK version.
+          final altSigner = OffchainSigner.fromPrivateKey(
+            privateKeyHex: testPrivateKeyHex,
+            chainId: 11155111,
+            easContractAddress:
+                '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+            easVersion: '0.26',
+          );
+          final signed = await altSigner.signOffchainAttestation(
+            schema: schema,
+            lpPayload: lpPayload,
+            userData: {
+              'timestamp': BigInt.from(1710000000),
+              'memo': 'cross-tool',
+            },
+          );
+
+          // The stored domain will have version '0.26'.
+          expect(signed.domain['version'], equals('0.26'));
+
+          // A verifier configured with easVersion='1.0.0' should still accept
+          // it — the signature is cryptographically valid regardless of version.
+          final result = signer.verifyOffchainAttestation(signed);
+          expect(result.isValid, isTrue,
+              reason: result.reason ?? 'expected isValid=true');
+        },
+      );
     });
 
     group('signerAddress', () {
@@ -196,177 +228,10 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // Task 4: Public typed-data and UID utility tests
+  // Task 4: UID utility tests
   // ---------------------------------------------------------------------------
 
   group('public utilities', () {
-    const schemaUID =
-        '0x0000000000000000000000000000000000000000000000000000000000000001';
-    const recipient = '0x0000000000000000000000000000000000000000';
-    final time = BigInt.from(1710000000);
-    final expirationTime = BigInt.zero;
-    const revocable = true;
-    const refUID =
-        '0x0000000000000000000000000000000000000000000000000000000000000000';
-    final data = Uint8List(0);
-    final salt = Uint8List(32); // all-zero salt for determinism
-
-    test('buildOffchainTypedDataJson returns correct top-level structure', () {
-      final json = OffchainSigner.buildOffchainTypedDataJson(
-        chainId: 11155111,
-        easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
-        schemaUID: schemaUID,
-        recipient: recipient,
-        time: time,
-        expirationTime: expirationTime,
-        revocable: revocable,
-        refUID: refUID,
-        data: data,
-        salt: salt,
-      );
-
-      expect(
-        json.keys,
-        containsAll(['types', 'primaryType', 'domain', 'message']),
-      );
-      expect(json['primaryType'], equals('Attest'));
-    });
-
-    test('buildOffchainTypedDataJson domain has correct values', () {
-      final json = OffchainSigner.buildOffchainTypedDataJson(
-        chainId: 11155111,
-        easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
-        schemaUID: schemaUID,
-        recipient: recipient,
-        time: time,
-        expirationTime: expirationTime,
-        revocable: revocable,
-        refUID: refUID,
-        data: data,
-        salt: salt,
-      );
-
-      final domain = json['domain'] as Map<String, dynamic>;
-      expect(domain['name'], equals('EAS Attestation'));
-      expect(domain['chainId'], equals('11155111')); // decimal string
-      expect(
-        domain['verifyingContract'],
-        equals('0xC2679fBD37d54388Ce493F1DB75320D236e1815e'),
-      );
-    });
-
-    test(
-      'buildOffchainTypedDataJson message has correct schema and version',
-      () {
-        final json = OffchainSigner.buildOffchainTypedDataJson(
-          chainId: 11155111,
-          easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
-          schemaUID: schemaUID,
-          recipient: recipient,
-          time: time,
-          expirationTime: expirationTime,
-          revocable: revocable,
-          refUID: refUID,
-          data: data,
-          salt: salt,
-        );
-
-        final message = json['message'] as Map<String, dynamic>;
-        expect(message['schema'], equals(schemaUID));
-        // version is attestationVersion (int 2) — stored as decimal string
-        expect(message['version'], equals('2'));
-      },
-    );
-
-    test(
-      'buildOffchainTypedDataJson types has 9 Attest fields and 4 EIP712Domain fields',
-      () {
-        final json = OffchainSigner.buildOffchainTypedDataJson(
-          chainId: 11155111,
-          easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
-          schemaUID: schemaUID,
-          recipient: recipient,
-          time: time,
-          expirationTime: expirationTime,
-          revocable: revocable,
-          refUID: refUID,
-          data: data,
-          salt: salt,
-        );
-
-        final types = json['types'] as Map<String, dynamic>;
-        final attestFields = types['Attest'] as List<dynamic>;
-        final domainFields = types['EIP712Domain'] as List<dynamic>;
-        expect(attestFields.length, equals(9));
-        expect(domainFields.length, equals(4));
-      },
-    );
-
-    test(
-      'buildOffchainTypedDataJson digest parities with native Eip712TypedData',
-      () {
-        final json = OffchainSigner.buildOffchainTypedDataJson(
-          chainId: 11155111,
-          easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
-          schemaUID: schemaUID,
-          recipient: recipient,
-          time: time,
-          expirationTime: expirationTime,
-          revocable: revocable,
-          refUID: refUID,
-          data: data,
-          salt: salt,
-        );
-
-        // Digest from JSON-safe map (wallet path)
-        final digestFromJson = Eip712TypedData.fromJson(json).encode();
-
-        // Digest from native Eip712TypedData (existing internal path) — not yet
-        // exposed as public, but we can build it ourselves for the parity check:
-        final nativeTypedData = Eip712TypedData(
-          types: {
-            'EIP712Domain': [
-              Eip712TypeDetails(name: 'name', type: 'string'),
-              Eip712TypeDetails(name: 'version', type: 'string'),
-              Eip712TypeDetails(name: 'chainId', type: 'uint256'),
-              Eip712TypeDetails(name: 'verifyingContract', type: 'address'),
-            ],
-            'Attest': [
-              Eip712TypeDetails(name: 'version', type: 'uint16'),
-              Eip712TypeDetails(name: 'schema', type: 'bytes32'),
-              Eip712TypeDetails(name: 'recipient', type: 'address'),
-              Eip712TypeDetails(name: 'time', type: 'uint64'),
-              Eip712TypeDetails(name: 'expirationTime', type: 'uint64'),
-              Eip712TypeDetails(name: 'revocable', type: 'bool'),
-              Eip712TypeDetails(name: 'refUID', type: 'bytes32'),
-              Eip712TypeDetails(name: 'data', type: 'bytes'),
-              Eip712TypeDetails(name: 'salt', type: 'bytes32'),
-            ],
-          },
-          primaryType: 'Attest',
-          domain: {
-            'name': 'EAS Attestation',
-            'version': '1.0.0',
-            'chainId': BigInt.from(11155111),
-            'verifyingContract': '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
-          },
-          message: {
-            'version': EASConstants.attestationVersion,
-            'schema': schemaUID,
-            'recipient': recipient,
-            'time': time,
-            'expirationTime': expirationTime,
-            'revocable': revocable,
-            'refUID': refUID,
-            'data': data,
-            'salt': salt,
-          },
-        );
-
-        expect(digestFromJson, equals(nativeTypedData.encode()));
-      },
-    );
-
     test(
       'computeOffchainUID matches signOffchainAttestation UID (deterministic salt)',
       () async {
@@ -440,16 +305,8 @@ void main() {
 
         final sepoliaComputedUid = _computeUidFromSigned(sepoliaSigned);
         final baseSepoliaComputedUid = _computeUidFromSigned(baseSepoliaSigned);
-        final sepoliaTypedData = _buildTypedDataFromSigned(
-          signed: sepoliaSigned,
-          chainId: 11155111,
-          easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
-        );
-        final baseSepoliaTypedData = _buildTypedDataFromSigned(
-          signed: baseSepoliaSigned,
-          chainId: 84532,
-          easContractAddress: '0x4200000000000000000000000000000000000021',
-        );
+        final sepoliaTypedData = _buildTypedDataFromSigned(sepoliaSigned);
+        final baseSepoliaTypedData = _buildTypedDataFromSigned(baseSepoliaSigned);
 
         expect(sepoliaSigned.uid, equals(baseSepoliaSigned.uid));
         expect(sepoliaComputedUid, equals(sepoliaSigned.uid));
@@ -613,23 +470,32 @@ String _computeUidFromSigned(SignedOffchainAttestation signed) {
   );
 }
 
-Map<String, dynamic> _buildTypedDataFromSigned({
-  required SignedOffchainAttestation signed,
-  required int chainId,
-  required String easContractAddress,
-}) {
-  return OffchainSigner.buildOffchainTypedDataJson(
-    chainId: chainId,
-    easContractAddress: easContractAddress,
-    schemaUID: signed.schemaUID,
-    recipient: signed.recipient,
-    time: signed.time,
-    expirationTime: signed.expirationTime,
-    revocable: signed.revocable,
-    refUID: signed.refUID,
-    data: signed.dataBytes,
-    salt: signed.saltBytes!,
-  );
+/// Builds a wallet-signing-format typed data JSON from a signed attestation.
+///
+/// Converts canonical envelope maps (integers stored as [int]/[BigInt]) into
+/// decimal-string format required by [Eip712TypedData.fromJson].
+Map<String, dynamic> _buildTypedDataFromSigned(
+  SignedOffchainAttestation signed,
+) {
+  final signDomain = {
+    ...signed.domain,
+    'chainId': (signed.domain['chainId'] as int).toString(),
+  };
+  final timeVal = signed.time;
+  final expVal = signed.expirationTime;
+  final verVal = signed.message['version'];
+  final signMessage = {
+    ...signed.message,
+    'time': timeVal.toString(),
+    'expirationTime': expVal.toString(),
+    'version': (verVal is int ? verVal : int.parse(verVal.toString())).toString(),
+  };
+  return {
+    'types': signed.types,
+    'primaryType': 'Attest',
+    'domain': signDomain,
+    'message': signMessage,
+  };
 }
 
 /// A [Signer] wrapper that shifts v back to 0/1 range to test normalization.
