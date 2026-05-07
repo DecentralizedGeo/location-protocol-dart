@@ -556,24 +556,56 @@ A single event log entry from a transaction receipt.
 
 ## SignedOffchainAttestation
 
-A signed offchain EAS attestation with EIP-712 signature, produced by `OffchainSigner.signOffchainAttestation()`.
+The canonical preserved EAS offchain attestation envelope. Serializes to the exact shape produced by the EAS offchain SDK:
 
-**Properties**
+```json
+{
+  "signer": "0x...",
+  "sig": {
+    "domain": { "name": "EAS Attestation", "version": "1.0.0", "chainId": 11155111, "verifyingContract": "0x..." },
+    "primaryType": "Attest",
+    "types": { "Attest": [...] },
+    "message": { "version": 2, "schema": "0x...", "recipient": "0x...", "time": 1710000000, ... },
+    "signature": { "v": 28, "r": "0x...", "s": "0x..." },
+    "uid": "0x..."
+  }
+}
+```
+
+**Core Properties (EIP-712 Envelope)**
 
 | Property | Type | Description |
 |---|---|---|
-| `uid` | `String` | Deterministic offchain UID (`0x`-prefixed) |
-| `schemaUID` | `String` | Schema UID this attestation conforms to |
-| `recipient` | `String` | Recipient address (may be zero address) |
-| `time` | `BigInt` | Attestation creation time (Unix seconds) |
-| `expirationTime` | `BigInt` | Expiration time (`0` = never) |
-| `revocable` | `bool` | Whether this attestation can be revoked |
-| `refUID` | `String` | Reference to another attestation UID (zero bytes32 for none) |
-| `data` | `Uint8List` | ABI-encoded data payload |
-| `salt` | `String` | Random 32-byte salt as `0x`-prefixed hex string |
-| `version` | `int` | Offchain attestation version (`2`) |
-| `signature` | `EIP712Signature` | EIP-712 ECDSA signature |
 | `signer` | `String` | Ethereum address of the signer |
+| `domain` | `Map<String, dynamic>` | EIP-712 domain — contains name, version, chainId, verifyingContract |
+| `primaryType` | `String` | EIP-712 primary type (always `"Attest"`) |
+| `types` | `Map<String, dynamic>` | EIP-712 types map — contains EIP712Domain and Attest descriptors |
+| `message` | `Map<String, dynamic>` | EIP-712 message — full attestation payload with version, schema, recipient, time, expirationTime, revocable, refUID, data, salt |
+| `signature` | `EIP712Signature` | EIP-712 ECDSA signature (v, r, s) |
+| `uid` | `String` | Deterministic offchain UID (`0x`-prefixed) |
+
+**Convenience Getters (access without navigating nested maps)**
+
+| Getter | Type | Source | Description |
+|---|---|---|---|
+| `schemaUID` | `String` | `message['schema']` | Schema UID this attestation conforms to |
+| `recipient` | `String` | `message['recipient']` | Recipient address |
+| `time` | `BigInt` | `message['time']` | Attestation creation time (Unix seconds) |
+| `expirationTime` | `BigInt` | `message['expirationTime']` | Expiration time (`0` = never) |
+| `revocable` | `bool` | `message['revocable']` | Whether this attestation can be revoked |
+| `refUID` | `String` | `message['refUID']` | Reference UID (zero bytes32 for none) |
+| `offchainVersion` | `int` | `message['version']` | Offchain attestation version (always `2`) |
+| `saltHex` | `String?` | `message['salt']` | Random 32-byte salt as `0x`-prefixed hex string |
+| `saltBytes` | `Uint8List?` | parsed from `saltHex` | Random 32-byte salt as bytes |
+| `dataHex` | `String` | `message['data']` | ABI-encoded data payload as `0x`-prefixed hex string |
+| `dataBytes` | `Uint8List` | parsed from `dataHex` | ABI-encoded data payload as bytes |
+
+**Factory constructors and serialization**
+
+| Method | Parameters | Returns | Description |
+|---|---|---|---|
+| `SignedOffchainAttestation.fromJson(Map<String, dynamic> json)` | `json` — canonical EAS onchain JSON | `SignedOffchainAttestation` | Deserializes from EAS offchain SDK JSON |
+| `toJson()` | — | `Map<String, dynamic>` | Serializes to canonical EAS offchain JSON |
 
 ---
 
@@ -651,8 +683,21 @@ Result of verifying an offchain attestation signature, produced by `OffchainSign
 | Property | Type | Description |
 |---|---|---|
 | `isValid` | `bool` | `true` if the signature is valid and the UID matches |
-| `recoveredAddress` | `String` | Ethereum address recovered from the signature |
-| `reason` | `String?` | Failure reason if `isValid` is `false`; `null` on success |
+| `recoveredAddress` | `String` | Ethereum address recovered from the signature. Empty string (`''`) for failures that occur before signature recovery (e.g. UID mismatch, invalid domain). Always check `isValid` before using. |
+| `code` | `VerificationFailure?` | Structured failure category (enum); `null` when `isValid` is `true` |
+| `reason` | `String?` | Human-readable failure reason; `null` on success |
+
+**VerificationFailure Enum Values**
+
+| Value | Description |
+|---|---|
+| `uidMismatch` | The recomputed UID does not match the stored UID |
+| `invalidDomain` | The preserved EIP-712 domain does not match the signer's configuration |
+| `invalidPrimaryType` | The `primaryType` is not `'Attest'` |
+| `invalidTypes` | The `types` map does not match the canonical Attest field list |
+| `missingSalt` | The v2 `salt` field is absent from the `message` map |
+| `invalidSignature` | The signer address cannot be recovered from the signature |
+| `signerMismatch` | The recovered signer address does not match `attestation.signer` |
 
 ---
 

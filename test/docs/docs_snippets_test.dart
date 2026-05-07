@@ -6,6 +6,7 @@
 @Tags(['doc-snippets'])
 library;
 
+import 'dart:convert';
 import 'package:test/test.dart';
 import 'package:location_protocol/location_protocol.dart';
 
@@ -60,6 +61,7 @@ void main() {
         );
 
         // 4. Sign the attestation offchain (EIP-712 typed data, no RPC needed).
+        // snippet: offchain_sign_and_verify
         final signed = await signer.signOffchainAttestation(
           schema: schema,
           lpPayload: payload,
@@ -70,10 +72,17 @@ void main() {
           },
         );
 
-        print('UID: ${signed.uid}');
-        print('Signer: ${signed.signer}');
+        // Serialize to EAS-compatible JSON (matches the EAS offchain SDK shape exactly)
+        print(jsonEncode(signed.toJson()));
 
-        // 5. Verify the signed attestation locally.
+        // Access common fields via getters
+        print('UID:        ${signed.uid}');
+        print('Schema UID: ${signed.schemaUID}');
+        print('Signer:     ${signed.signer}');
+        print('Version:    ${signed.offchainVersion}');   // 2
+        print('Salt:       ${signed.saltHex}');
+
+        // Verify
         final result = signer.verifyOffchainAttestation(signed);
         assert(result.isValid, 'Attestation verification failed: ${result.reason}');
         print('Valid: ${result.isValid}');
@@ -844,7 +853,7 @@ void main() {
 
           // Inspect the full signed attestation
           print('Schema UID: ${signed.schemaUID}');
-          print('Version:    ${signed.version}');
+          print('Version:    ${signed.offchainVersion}');
           print('Revocable:  ${signed.revocable}');
           print('r: ${signed.signature.r}');
           print('s: ${signed.signature.s}');
@@ -917,7 +926,7 @@ void main() {
 
         // Step 5 — Inspect the signed attestation
         print('Schema UID: ${signed.schemaUID}');
-        print('Version:    ${signed.version}');
+        print('Version:    ${signed.offchainVersion}');
         print('Revocable:  ${signed.revocable}');
         print('r: ${signed.signature.r}');
         print('s: ${signed.signature.s}');

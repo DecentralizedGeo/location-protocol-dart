@@ -108,15 +108,16 @@ void main() {
       // Verify signed attestation structure
       expect(signed.uid, startsWith('0x'));
       expect(signed.uid.length, equals(66));
-      expect(signed.version, equals(2));
-      expect(signed.salt, startsWith('0x'));
+      expect(signed.offchainVersion, equals(2));
+      expect(signed.saltHex, isNotNull);
+      expect(signed.saltHex, startsWith('0x'));
       expect(signed.signature.v, anyOf(equals(27), equals(28)));
       expect(signed.signer, startsWith('0x'));
       expect(signed.signer.length, equals(42));
 
       // Step 4: Verify the attestation
       final verification = signer.verifyOffchainAttestation(signed);
-      expect(verification.isValid, isTrue);
+      expect(verification.isValid, isTrue, reason: 'Verification failed: ${verification.reason}');
       expect(
         verification.recoveredAddress.toLowerCase(),
         equals(signed.signer.toLowerCase()),
@@ -158,7 +159,7 @@ void main() {
       );
 
       // Different data → different UIDs (even ignoring salt)
-      expect(signed1.data, isNot(equals(signed2.data)));
+      expect(signed1.dataBytes, isNot(equals(signed2.dataBytes)));
     });
 
     test('LP-only schema works (no user fields)', () async {

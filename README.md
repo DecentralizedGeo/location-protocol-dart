@@ -114,6 +114,7 @@ See the [example/main.dart](example/main.dart) for a complete, runnable demonstr
 > **Security:** Never hard-code a real private key. Use environment variables or a secrets manager in production. See [Environment configuration](docs/guides/reference-environment.md).
 
 ```dart
+import 'dart:convert';
 import 'package:location_protocol/location_protocol.dart';
 
 Future<void> main() async {
@@ -149,6 +150,7 @@ Future<void> main() async {
   );
 
   // 4. Sign the attestation offchain (EIP-712 typed data, no RPC needed).
+  // snippet: offchain_sign_and_verify
   final signed = await signer.signOffchainAttestation(
     schema: schema,
     lpPayload: payload,
@@ -159,14 +161,22 @@ Future<void> main() async {
     },
   );
 
-  print('UID: ${signed.uid}');
-  print('Signer: ${signed.signer}');
+  // Serialize to EAS-compatible JSON (matches the EAS offchain SDK shape exactly)
+  print(jsonEncode(signed.toJson()));
 
-  // 5. Verify the signed attestation locally.
+  // Access common fields via getters
+  print('UID:        ${signed.uid}');
+  print('Schema UID: ${signed.schemaUID}');
+  print('Signer:     ${signed.signer}');
+  print('Version:    ${signed.offchainVersion}');   // 2
+  print('Salt:       ${signed.saltHex}');
+
+  // Verify
   final result = signer.verifyOffchainAttestation(signed);
   assert(result.isValid, 'Attestation verification failed: ${result.reason}');
   print('Valid: ${result.isValid}');
   print('Recovered address: ${result.recoveredAddress}');
+  // end snippet: offchain_sign_and_verify
 
   // 6. Optional: timestamp the offchain UID on-chain for immutable anchoring.
   //
