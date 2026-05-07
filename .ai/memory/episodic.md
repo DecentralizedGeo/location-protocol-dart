@@ -175,6 +175,19 @@
 - Context: Expanded `test/eas/offchain_signer_test.dart` so the multi-chain parity test now directly recomputes `OffchainSigner.computeOffchainUID(...)` from each signed attestation and rebuilds typed-data JSON for both chains. The test now proves identical UID-driving message fields and identical recomputed UIDs across chains while showing that `domain.chainId`, `domain.verifyingContract`, typed-data digests, and signatures differ.
 - Verification: `dart test test/eas/offchain_signer_test.dart -r expanded` passed with 18/18 tests.
 
+### [ID: PHASE9_CANONICAL_ENVELOPE] -> Follows [ISSUE3_ALIAS_DOCS_AND_COVERAGE]
+- **Date**: 2026-05-07
+- **Event**: Strict EAS Offchain Envelope — implementation, hardening, and review
+- **Branch**: `feat/strict-eas-offchain-envelope`
+- **Status**: COMPLETED (pending PR)
+- **Context**: Refactored `SignedOffchainAttestation` from a flat derived struct into a preserved canonical EAS envelope matching the TS SDK's `EIP712Response` shape (`signer`, `domain`, `primaryType`, `types`, `message`, `signature`, `uid`). Added `EIP712Signature.toJson/fromJson`, `VerificationFailure` enum (7 codes), and convenience getters on the model. `verifyOffchainAttestation` now validates UID, domain, primaryType, types, then ecRecovers signer.
+- **Bugs Fixed This Session**:
+  - `docs_snippets_test.dart` failed to compile: `docs_snippet_extractor.dart` `generateFileHeader()` hardcoded only `package:location_protocol` — missing `dart:convert` which the README snippet uses for `jsonEncode`. Fixed by adding `import 'dart:convert'` to the extractor header and regenerating.
+  - `sepolia_onchain_test.dart` `getAttestation` returned null immediately after `attest`: RPC load-balancing caused the read to land on an un-synced node. Fixed with retry loop (5 attempts, 3s gaps).
+- **Review Finding** (see `doc/spec/artifacts/offchain-envelope-implementation-review.md`): Implementation is correct but has 3 overengineering issues to address in a follow-on hardening pass: (1) `verifyOffchainAttestation` conflates structural validation with cryptographic verification, rejecting valid cross-tool attestations; (2) hand-rolled `_mapsDeepEqual` should be replaced with `package:collection`'s `DeepCollectionEquality`; (3) `buildOffchainTypedDataJson` static is dead code with an incomplete `message` map.
+- **Commits** (6 total on branch vs main): `feat: add toJson/fromJson to EIP712Signature`, `feat: add VerificationFailure enum and code field to VerificationResult`, `feat: redefine SignedOffchainAttestation as canonical EAS envelope`, `feat: refactor OffchainSigner to build and verify canonical EAS envelope`, `feat: update integration tests and docs for canonical envelope API`, `fix: add dart:convert to docs test header; retry getAttestation for RPC consistency`
+- **Verification**: 301/301 offline tests passing; Sepolia integration tests passing
+
 ### [ID: ISSUE3_ALIAS_DOCS_AND_COVERAGE] -> Follows [ISSUE4_UID_PARITY_TEST_REFINEMENT]
 - Date: 2026-03-26
 - Event: Closed PR review gaps for dynamic-schema helper discoverability and alias-level negative coverage

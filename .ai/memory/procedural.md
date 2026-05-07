@@ -78,6 +78,13 @@
 - **`buildAttestTxRequest` value encoding**: Always encode the ETH value as a `0x`-prefixed hex string (`BigInt.toRadixString(16)`), not decimal. Default is `'0x0'`.
 - **`from` key conditional inclusion**: In `buildAttestTxRequest`, include `from` ONLY if provided using Dart's conditional map entry syntax (`if (from != null) 'from': from`). Wallet SDKs that infer `from` from the connected wallet will fail if an explicit `null` string is passed.
 
+### Phase 9 Canonical Envelope Patterns
+- **`docs_snippet_extractor.dart` import fragility**: `generateFileHeader()` owns the fixed import list. Any snippet using a package not in the barrel (e.g. `dart:convert`, `dart:io`) will silently strip the import and fail at test load time. Fix: add all commonly-used non-barrel imports to `generateFileHeader()`, or scan extracted snippets for imports and pass them through.
+- **RPC read-after-write consistency**: After `waitForReceipt`, a follow-up `eth_call`/`getAttestation` may return null or stale state on load-balanced RPC endpoints (Alchemy/Infura). Pattern: retry up to N times with a short sleep (`Future.delayed(const Duration(seconds: 3))`) before asserting. 5 attempts covers all observed cases on Sepolia.
+- **`_mapsDeepEqual` replacement**: Hand-rolled deep equality on `Map<String,dynamic>` with nested Lists. Replace with `DeepCollectionEquality().equals(a, b)` from `package:collection` (already a transitive dep). Import: `import 'package:collection/collection.dart';`.
+- **Verification split pattern** (planned): `verifyOffchainAttestation` → rename to `verifySignature` (UID recompute + ecRecover + address compare only). Add `validateEnvelope` for explicit structural checks (domain/types deep-equal). Callers that need strict format enforcement call both; callers verifying cross-tool attestations call only `verifySignature`.
+- **Dead static removal**: `buildOffchainTypedDataJson` static on `OffchainSigner` is unused (superseded by private `_buildTypedDataJsonForSigning`) and has an incomplete `message` map. Remove before any pub.dev release.
+
 ### Phase 8.1 Documentation Patterns
 - **Conceptual Separation in Docs**: When describing the library or its capabilities, explicitly maintain the conceptual separation between the portable Location Protocol payload and the EVM-specific EAS envelope. Do not conflate the portability of the payload with the EVM-bound nature of the EAS signature.
 
