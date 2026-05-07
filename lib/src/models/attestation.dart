@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:blockchain_utils/blockchain_utils.dart';
 
 import 'signature.dart';
+import '../utils/hex_utils.dart';
 
 /// An unsigned EAS attestation — the data payload before signing.
 class UnsignedAttestation {
@@ -37,59 +38,154 @@ class UnsignedAttestation {
   });
 }
 
-/// A signed offchain EAS attestation with EIP-712 signature.
+/// A signed offchain EAS attestation in the canonical EAS envelope format.
+///
+/// This is the exact JSON shape produced by the EAS offchain SDK:
+/// ```json
+/// {
+///   "signer": "0x...",
+///   "sig": {
+///     "domain": {...},
+///     "primaryType": "Attest",
+///     "types": {"Attest": [...]},
+///     "message": {...},
+///     "signature": {"v": 28, "r": "0x...", "s": "0x..."},
+///     "uid": "0x..."
+///   }
+/// }
+/// ```
+///
+/// Use the convenience getters ([schemaUID], [time], [saltHex], etc.) to
+/// access common fields without navigating the nested map directly.
 class SignedOffchainAttestation {
-  /// The deterministic offchain UID.
-  final String uid;
-
-  /// Schema UID.
-  final String schemaUID;
-
-  /// Recipient address.
-  final String recipient;
-
-  /// Attestation creation time (Unix seconds).
-  final BigInt time;
-
-  /// Expiration time (0 = never).
-  final BigInt expirationTime;
-
-  /// Whether revocable.
-  final bool revocable;
-
-  /// Reference UID.
-  final String refUID;
-
-  /// ABI-encoded data payload.
-  final Uint8List data;
-
-  /// Random salt (32 bytes, hex string).
-  final String salt;
-
-  /// Offchain attestation version.
-  final int version;
-
-  /// The EIP-712 signature.
-  final EIP712Signature signature;
-
-  /// The signer's Ethereum address.
+  /// The Ethereum address of the signer.
   final String signer;
 
+  /// The EIP-712 domain — contains name, version, chainId, verifyingContract.
+  ///
+  /// [chainId] is stored as an [int] (not a string).
+  final Map<String, dynamic> domain;
+
+  /// The EIP-712 primary type. Always `'Attest'`.
+  final String primaryType;
+
+  /// The EIP-712 types map — contains the Attest field descriptor list.
+  final Map<String, dynamic> types;
+
+  /// The EIP-712 message — the full attestation payload.
+  ///
+  /// Numeric fields ([time], [expirationTime], [version]) are stored as [int]
+  /// when deserialized from JSON, and as [BigInt] when built during signing.
+  /// The getters handle both forms automatically.
+  final Map<String, dynamic> message;
+
+  /// The EIP-712 signature components.
+  final EIP712Signature signature;
+
+  /// The deterministic offchain attestation UID.
+  final String uid;
+
   const SignedOffchainAttestation({
-    required this.uid,
-    required this.schemaUID,
-    required this.recipient,
-    required this.time,
-    required this.expirationTime,
-    required this.revocable,
-    required this.refUID,
-    required this.data,
-    required this.salt,
-    required this.version,
-    required this.signature,
     required this.signer,
+    required this.domain,
+    required this.primaryType,
+    required this.types,
+    required this.message,
+    required this.signature,
+    required this.uid,
   });
+
+  // ---------------------------------------------------------------------------
+  // Serialization
+  // ---------------------------------------------------------------------------
+
+  /// Deserializes from the canonical EAS offchain JSON envelope.
+  factory SignedOffchainAttestation.fromJson(Map<String, dynamic> json) {
+    final sig = json['sig'] as Map<String, dynamic>;
+    return SignedOffchainAttestation(
+      signer: json['signer'] as String,
+      domain: sig['domain'] as Map<String, dynamic>,
+      primaryType: sig['primaryType'] as String,
+      types: sig['types'] as Map<String, dynamic>,
+      message: sig['message'] as Map<String, dynamic>,
+      signature: EIP712Signature.fromJson(sig['signature'] as Map<String, dynamic>),
+      uid: sig['uid'] as String,
+    );
+  }
+
+  /// Serializes to the canonical EAS offchain JSON envelope.
+  Map<String, dynamic> toJson() => {
+        'signer': signer,
+        'sig': {
+          'domain': domain,
+          'primaryType': primaryType,
+          'types': types,
+          'message': message,
+          'signature': signature.toJson(),
+          'uid': uid,
+        },
+      };
+
+  // ---------------------------------------------------------------------------
+  // Derived getters (projections from the preserved message map)
+  // ---------------------------------------------------------------------------
+
+  /// Schema UID from the message.
+  String get schemaUID => message['schema'] as String;
+
+  /// Recipient address from the message.
+  String get recipient => message['recipient'] as String;
+
+  /// Attestation creation time (Unix seconds) from the message.
+  BigInt get time {
+    final val = message['time'];
+    if (val is BigInt) return val;
+    if (val is int) return BigInt.from(val);
+    return BigInt.parse(val.toString());
+  }
+
+  /// Expiration time (0 = never) from the message.
+  BigInt get expirationTime {
+    final val = message['expirationTime'];
+    if (val is BigInt) return val;
+    if (val is int) return BigInt.from(val);
+    return BigInt.parse(val.toString());
+  }
+
+  /// Whether this attestation is revocable.
+  bool get revocable => message['revocable'] as bool;
+
+  /// Reference UID from the message.
+  String get refUID => message['refUID'] as String;
+
+  /// Offchain attestation version from the message (v2).
+  int get offchainVersion {
+    final val = message['version'];
+    if (val is int) return val;
+    return int.parse(val.toString());
+  }
+
+  /// Salt as a 0x-prefixed 64-char hex string (32 bytes), or null if missing.
+  String? get saltHex {
+    final val = message['salt'];
+    if (val == null) return null;
+    return val as String?;
+  }
+
+  /// Salt decoded to bytes, or null if not present.
+  Uint8List? get saltBytes {
+    final hex = saltHex;
+    if (hex == null) return null;
+    return hex.toBytes();
+  }
+
+  /// ABI-encoded data payload as a 0x-prefixed hex string.
+  String get dataHex => message['data'] as String;
+
+  /// ABI-encoded data payload decoded to bytes.
+  Uint8List get dataBytes => dataHex.toBytes();
 }
+
 
 /// A record representing an on-chain attestation.
 class Attestation {

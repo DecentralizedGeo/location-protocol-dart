@@ -61,25 +61,135 @@ void main() {
   });
 
   group('SignedOffchainAttestation', () {
-    test('stores attestation data + signature + uid + salt', () {
-      final signed = SignedOffchainAttestation(
-        uid: '0xuid123',
-        schemaUID: '0xschema',
-        recipient: '0xrecip',
-        time: BigInt.from(1710000000),
-        expirationTime: BigInt.zero,
-        revocable: true,
-        refUID: '0x0000000000000000000000000000000000000000000000000000000000000000',
-        data: Uint8List.fromList([1, 2, 3]),
-        salt: '0xsalt',
-        version: 2,
-        signature: EIP712Signature(v: 28, r: '0xr', s: '0xs'),
-        signer: '0xSignerAddress',
-      );
-      expect(signed.uid, equals('0xuid123'));
-      expect(signed.signature.v, equals(28));
-      expect(signed.signer, equals('0xSignerAddress'));
-      expect(signed.version, equals(2));
+    // This is the canonical fixture used across all sub-tests in this group.
+    // The shape mirrors what the EAS offchain SDK produces.
+    final canonicalJson = {
+      'signer': '0x1111111111111111111111111111111111111111',
+      'sig': {
+        'domain': {
+          'name': 'EAS Attestation',
+          'version': '1.0.0',
+          'chainId': 11155111,
+          'verifyingContract': '0x0a7E2Ff54e76B465dc9d8eb07dcec46b129859f9',
+        },
+        'primaryType': 'Attest',
+        'types': {
+          'EIP712Domain': [
+            {'name': 'name', 'type': 'string'},
+            {'name': 'version', 'type': 'string'},
+            {'name': 'chainId', 'type': 'uint256'},
+            {'name': 'verifyingContract', 'type': 'address'},
+          ],
+          'Attest': [
+            {'name': 'schema', 'type': 'bytes32'},
+            {'name': 'recipient', 'type': 'address'},
+            {'name': 'time', 'type': 'uint64'},
+            {'name': 'expirationTime', 'type': 'uint64'},
+            {'name': 'revocable', 'type': 'bool'},
+            {'name': 'refUID', 'type': 'bytes32'},
+            {'name': 'data', 'type': 'bytes'},
+            {'name': 'salt', 'type': 'bytes32'},
+            {'name': 'version', 'type': 'uint16'},
+          ],
+        },
+        'message': {
+          'schema': '0xe1ec9a502c9ce3e31917fd9a6800fbb89df7abbb2e4942ce603831522cb5cb67',
+          'recipient': '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+          'time': 1710000000,
+          'expirationTime': 0,
+          'revocable': true,
+          'refUID': '0x0000000000000000000000000000000000000000000000000000000000000000',
+          'data': '0x',
+          'salt': '0x0000000000000000000000000000000000000000000000000000000000000000',
+          'version': 2,
+        },
+        'signature': {
+          'v': 28,
+          'r': '0xdc34d28972f90b283b03ca6ae897c131ef940dbace1fdf144671211d51de5b4b',
+          's': '0x027be7c54eb7f03f5b1fa797339c007d1294b895147765bb411ca4dcc7df74be',
+        },
+        'uid': '0x055e7dc3d45e69e83c33d75a48b0a62b050f7b2507611a6531aae43964d4dd98',
+      },
+    };
+
+    late SignedOffchainAttestation canonical;
+
+    setUp(() {
+      canonical = SignedOffchainAttestation.fromJson(canonicalJson);
+    });
+
+    test('fromJson parses signer', () {
+      expect(canonical.signer, equals('0x1111111111111111111111111111111111111111'));
+    });
+
+    test('fromJson parses uid', () {
+      expect(canonical.uid, equals('0x055e7dc3d45e69e83c33d75a48b0a62b050f7b2507611a6531aae43964d4dd98'));
+    });
+
+    test('toJson emits exactly signer and sig at the top level', () {
+      final json = canonical.toJson();
+      expect(json.keys.toList(), equals(['signer', 'sig']));
+    });
+
+    test('toJson sig contains exactly the six canonical keys', () {
+      final sig = canonical.toJson()['sig'] as Map<String, dynamic>;
+      expect(sig.keys.toSet(), equals({'domain', 'primaryType', 'types', 'message', 'signature', 'uid'}));
+    });
+
+    test('toJson round-trips correctly', () {
+      final json = canonical.toJson();
+      final restored = SignedOffchainAttestation.fromJson(json);
+      expect(restored.signer, equals(canonical.signer));
+      expect(restored.uid, equals(canonical.uid));
+      expect(restored.primaryType, equals(canonical.primaryType));
+    });
+
+    group('derived getters', () {
+      test('schemaUID', () {
+        expect(canonical.schemaUID, equals('0xe1ec9a502c9ce3e31917fd9a6800fbb89df7abbb2e4942ce603831522cb5cb67'));
+      });
+
+      test('recipient', () {
+        expect(canonical.recipient, equals('0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'));
+      });
+
+      test('time', () {
+        expect(canonical.time, equals(BigInt.from(1710000000)));
+      });
+
+      test('expirationTime', () {
+        expect(canonical.expirationTime, equals(BigInt.zero));
+      });
+
+      test('revocable', () {
+        expect(canonical.revocable, isTrue);
+      });
+
+      test('refUID', () {
+        expect(canonical.refUID, equals('0x0000000000000000000000000000000000000000000000000000000000000000'));
+      });
+
+      test('offchainVersion', () {
+        expect(canonical.offchainVersion, equals(2));
+      });
+
+      test('saltHex', () {
+        expect(canonical.saltHex, equals('0x0000000000000000000000000000000000000000000000000000000000000000'));
+      });
+
+      test('saltBytes from saltHex', () {
+        final bytes = canonical.saltBytes;
+        expect(bytes, isNotNull);
+        expect(bytes!.length, equals(32));
+      });
+
+      test('dataHex', () {
+        expect(canonical.dataHex, equals('0x'));
+      });
+
+      test('dataBytes from dataHex', () {
+        expect(canonical.dataBytes, isEmpty);
+      });
     });
   });
 
