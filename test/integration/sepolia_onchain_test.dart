@@ -10,6 +10,7 @@ import 'package:location_protocol/src/eas/onchain_client.dart';
 import 'package:location_protocol/src/eas/abi_encoder.dart';
 import 'package:location_protocol/src/eas/constants.dart';
 import 'package:location_protocol/src/rpc/default_rpc_provider.dart';
+import 'package:location_protocol/src/models/attestation.dart';
 
 import '../test_helpers/dotenv_loader.dart';
 
