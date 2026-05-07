@@ -91,28 +91,37 @@ class OffchainSigner {
     // 2. Compute schema UID
     final schemaUID = SchemaUID.compute(schema);
 
-    // 3. Build JSON-safe EIP-712 typed data map
-    final typedDataJson = buildOffchainTypedDataJson(
-      chainId: chainId,
-      easContractAddress: easContractAddress,
-      schemaUID: schemaUID,
-      recipient: recipient,
-      time: now,
-      expirationTime: expTime,
-      revocable: schema.revocable,
-      refUID: ref,
-      data: encodedData,
-      salt: saltBytes,
-      easVersion: easVersion,
+    // 3. Build canonical envelope maps (preserved in the attestation)
+    // Use _expectedDomain() and _canonicalTypes() to ensure consistency
+    final domain = _expectedDomain();
+    final types = _canonicalTypes();
+
+    final message = {
+      'version': EASConstants.attestationVersion,
+      'schema': schemaUID,
+      'recipient': recipient,
+      'time': now, // stored as BigInt
+      'expirationTime': expTime,
+      'revocable': schema.revocable,
+      'refUID': ref,
+      'data': '0x${BytesUtils.toHexString(encodedData)}',
+      'salt': saltHex,
+    };
+
+    // 4. Build transient wallet signing request (decimal strings for on_chain compat)
+    final typedDataJson = _buildTypedDataJsonForSigning(
+      domain: domain,
+      message: message,
+      types: types,
     );
 
-    // 4. Sign via the Signer interface (supports both local keys and wallets)
+    // 5. Sign via the Signer interface (supports both local keys and wallets)
     final rawSig = await signer.signTypedData(typedDataJson);
 
-    // 5. Normalize v to 27/28 (wallets may return 0/1)
+    // 6. Normalize v to 27/28 (wallets may return 0/1)
     final normalizedV = rawSig.v < 27 ? rawSig.v + 27 : rawSig.v;
 
-    // 6. Compute offchain UID
+    // 7. Compute offchain UID
     final uid = computeOffchainUID(
       schemaUID: schemaUID,
       recipient: recipient,
@@ -125,18 +134,13 @@ class OffchainSigner {
     );
 
     return SignedOffchainAttestation(
-      uid: uid,
-      schemaUID: schemaUID,
-      recipient: recipient,
-      time: now,
-      expirationTime: expTime,
-      revocable: schema.revocable,
-      refUID: ref,
-      data: encodedData,
-      salt: saltHex,
-      version: EASConstants.attestationVersion,
-      signature: EIP712Signature(v: normalizedV, r: rawSig.r, s: rawSig.s),
       signer: signerAddress,
+      domain: domain,
+      primaryType: 'Attest',
+      types: types,
+      message: message,
+      signature: EIP712Signature(v: normalizedV, r: rawSig.r, s: rawSig.s),
+      uid: uid,
     );
   }
 
@@ -171,9 +175,17 @@ class OffchainSigner {
   VerificationResult verifyOffchainAttestation(
     SignedOffchainAttestation attestation,
   ) {
-    final saltBytes = Uint8List.fromList(attestation.salt.toBytes());
-
     // 1. Verify UID
+    final saltBytes = attestation.saltBytes;
+    if (saltBytes == null) {
+      return VerificationResult(
+        isValid: false,
+        recoveredAddress: '',
+        code: VerificationFailure.missingSalt,
+        reason: 'Missing salt field in message',
+      );
+    }
+
     final expectedUID = computeOffchainUID(
       schemaUID: attestation.schemaUID,
       recipient: attestation.recipient,
@@ -181,7 +193,7 @@ class OffchainSigner {
       expirationTime: attestation.expirationTime,
       revocable: attestation.revocable,
       refUID: attestation.refUID,
-      data: attestation.data,
+      data: attestation.dataBytes,
       salt: saltBytes,
     );
 
@@ -189,23 +201,47 @@ class OffchainSigner {
       return VerificationResult(
         isValid: false,
         recoveredAddress: '',
+        code: VerificationFailure.uidMismatch,
         reason: 'UID mismatch: expected $expectedUID, got ${attestation.uid}',
       );
     }
 
-    // 2. Recover signer address via JSON-safe typed data → digest → ecRecover
-    final typedDataJson = buildOffchainTypedDataJson(
-      chainId: chainId,
-      easContractAddress: easContractAddress,
-      schemaUID: attestation.schemaUID,
-      recipient: attestation.recipient,
-      time: attestation.time,
-      expirationTime: attestation.expirationTime,
-      revocable: attestation.revocable,
-      refUID: attestation.refUID,
-      data: attestation.data,
-      salt: saltBytes,
-      easVersion: easVersion,
+    // 2. Validate preserved envelope structure
+    final expectedDomain = _expectedDomain();
+    // Deep equality check for domain maps (can't use simple != for Map comparison)
+    if (!_mapsDeepEqual(attestation.domain, expectedDomain)) {
+      return VerificationResult(
+        isValid: false,
+        recoveredAddress: '',
+        code: VerificationFailure.invalidDomain,
+        reason: 'Domain mismatch',
+      );
+    }
+
+    if (attestation.primaryType != 'Attest') {
+      return VerificationResult(
+        isValid: false,
+        recoveredAddress: '',
+        code: VerificationFailure.invalidPrimaryType,
+        reason: 'Primary type must be "Attest", got ${attestation.primaryType}',
+      );
+    }
+
+    final expectedTypes = _canonicalTypes();
+    if (!_mapsDeepEqual(attestation.types, expectedTypes)) {
+      return VerificationResult(
+        isValid: false,
+        recoveredAddress: '',
+        code: VerificationFailure.invalidTypes,
+        reason: 'Types map does not match canonical structure',
+      );
+    }
+
+    // 3. Recover signer address via preserved envelope → digest → ecRecover
+    final typedDataJson = _buildTypedDataJsonForSigning(
+      domain: attestation.domain,
+      message: attestation.message,
+      types: attestation.types,
     );
 
     final hash = Eip712TypedData.fromJson(typedDataJson).encode();
@@ -231,6 +267,7 @@ class OffchainSigner {
       return VerificationResult(
         isValid: false,
         recoveredAddress: '',
+        code: VerificationFailure.invalidSignature,
         reason: 'Failed to recover public key from signature',
       );
     }
@@ -239,13 +276,106 @@ class OffchainSigner {
     final isValid =
         recoveredAddress.toLowerCase() == attestation.signer.toLowerCase();
 
+    if (!isValid) {
+      return VerificationResult(
+        isValid: false,
+        recoveredAddress: recoveredAddress,
+        code: VerificationFailure.signerMismatch,
+        reason: 'Signer mismatch: recovered $recoveredAddress, expected ${attestation.signer}',
+      );
+    }
+
     return VerificationResult(
-      isValid: isValid,
+      isValid: true,
       recoveredAddress: recoveredAddress,
-      reason: !isValid
-          ? 'Signer mismatch: recovered $recoveredAddress, expected ${attestation.signer}'
-          : null,
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Private helpers
+  // ---------------------------------------------------------------------------
+
+  /// Builds the transient EIP-712 JSON request for wallet signing.
+  ///
+  /// Converts canonical envelope maps (where integers are stored as [int] or
+  /// [BigInt]) into wallet-compatible format with decimal string integers.
+  /// This is required by the `on_chain` package v8 which calls
+  /// `valueAsBigInt(allowHex: false)` for numeric types.
+  Map<String, dynamic> _buildTypedDataJsonForSigning({
+    required Map<String, dynamic> domain,
+    required Map<String, dynamic> message,
+    required Map<String, dynamic> types,
+  }) {
+    // Convert domain: chainId int → decimal string
+    final signDomain = {...domain};
+    signDomain['chainId'] = (domain['chainId'] as int).toString();
+
+    // Convert message: time, expirationTime, version → decimal strings
+    final signMessage = {...message};
+    final timeVal = message['time'];
+    signMessage['time'] =
+        (timeVal is BigInt ? timeVal : BigInt.from(timeVal as int)).toString();
+    final expVal = message['expirationTime'];
+    signMessage['expirationTime'] =
+        (expVal is BigInt ? expVal : BigInt.from(expVal as int)).toString();
+    final verVal = message['version'];
+    signMessage['version'] = (verVal is int ? verVal : int.parse(verVal.toString())).toString();
+
+    return {
+      'types': types,
+      'primaryType': 'Attest',
+      'domain': signDomain,
+      'message': signMessage,
+    };
+  }
+
+  /// Builds the expected EIP-712 domain for this signer's configuration.
+  Map<String, dynamic> _expectedDomain() => {
+        'name': EASConstants.eip712DomainName,
+        'version': easVersion,
+        'chainId': chainId,
+        'verifyingContract': easContractAddress,
+      };
+
+  /// Returns the canonical types map for offchain attestations.
+  Map<String, dynamic> _canonicalTypes() => {
+        'EIP712Domain': [
+          {'name': 'name', 'type': 'string'},
+          {'name': 'version', 'type': 'string'},
+          {'name': 'chainId', 'type': 'uint256'},
+          {'name': 'verifyingContract', 'type': 'address'},
+        ],
+        'Attest': [
+          {'name': 'version', 'type': 'uint16'},
+          {'name': 'schema', 'type': 'bytes32'},
+          {'name': 'recipient', 'type': 'address'},
+          {'name': 'time', 'type': 'uint64'},
+          {'name': 'expirationTime', 'type': 'uint64'},
+          {'name': 'revocable', 'type': 'bool'},
+          {'name': 'refUID', 'type': 'bytes32'},
+          {'name': 'data', 'type': 'bytes'},
+          {'name': 'salt', 'type': 'bytes32'},
+        ],
+      };
+
+  /// Deep equality check for nested maps (list order-sensitive).
+  bool _mapsDeepEqual(dynamic a, dynamic b) {
+    if (a is Map && b is Map) {
+      if (a.length != b.length) return false;
+      for (final key in a.keys) {
+        if (!b.containsKey(key)) return false;
+        if (!_mapsDeepEqual(a[key], b[key])) return false;
+      }
+      return true;
+    } else if (a is List && b is List) {
+      if (a.length != b.length) return false;
+      for (int i = 0; i < a.length; i++) {
+        if (!_mapsDeepEqual(a[i], b[i])) return false;
+      }
+      return true;
+    } else {
+      return a == b;
+    }
   }
 
   // ---------------------------------------------------------------------------

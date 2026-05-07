@@ -11,7 +11,6 @@ import 'package:location_protocol/src/eas/signer.dart';
 import 'package:location_protocol/src/eas/constants.dart';
 import 'package:location_protocol/src/models/attestation.dart';
 import 'package:location_protocol/src/models/signature.dart';
-import 'package:location_protocol/src/utils/hex_utils.dart';
 
 void main() {
   // A well-known test private key — NEVER use in production
@@ -71,8 +70,8 @@ void main() {
           userData: {'timestamp': BigInt.from(1710000000), 'memo': 'Test'},
         );
 
-        expect(signed.salt, startsWith('0x'));
-        expect(signed.salt.length, equals(66)); // 0x + 64 hex chars
+        expect(signed.saltHex, startsWith('0x'));
+        expect(signed.saltHex!.length, equals(66)); // 0x + 64 hex chars
       });
 
       test('sets version to 2', () async {
@@ -82,7 +81,7 @@ void main() {
           userData: {'timestamp': BigInt.from(1710000000), 'memo': 'Test'},
         );
 
-        expect(signed.version, equals(EASConstants.attestationVersion));
+        expect(signed.offchainVersion, equals(EASConstants.attestationVersion));
       });
 
       test('signature has valid v, r, s components', () async {
@@ -390,7 +389,7 @@ void main() {
           expirationTime: signed.expirationTime,
           revocable: signed.revocable,
           refUID: signed.refUID,
-          data: signed.data,
+          data: signed.dataBytes,
           salt: deterministicSalt,
         );
 
@@ -466,8 +465,8 @@ void main() {
         );
         expect(sepoliaSigned.revocable, equals(baseSepoliaSigned.revocable));
         expect(sepoliaSigned.refUID, equals(baseSepoliaSigned.refUID));
-        expect(sepoliaSigned.data, orderedEquals(baseSepoliaSigned.data));
-        expect(sepoliaSigned.salt, equals(baseSepoliaSigned.salt));
+      expect(sepoliaSigned.dataBytes, orderedEquals(baseSepoliaSigned.dataBytes));
+      expect(sepoliaSigned.saltHex, equals(baseSepoliaSigned.saltHex));
         expect(sepoliaSigned.signer, equals(baseSepoliaSigned.signer));
 
         expect(
@@ -609,8 +608,8 @@ String _computeUidFromSigned(SignedOffchainAttestation signed) {
     expirationTime: signed.expirationTime,
     revocable: signed.revocable,
     refUID: signed.refUID,
-    data: signed.data,
-    salt: signed.salt.toBytes(),
+    data: signed.dataBytes,
+    salt: signed.saltBytes!,
   );
 }
 
@@ -628,8 +627,8 @@ Map<String, dynamic> _buildTypedDataFromSigned({
     expirationTime: signed.expirationTime,
     revocable: signed.revocable,
     refUID: signed.refUID,
-    data: signed.data,
-    salt: signed.salt.toBytes(),
+    data: signed.dataBytes,
+    salt: signed.saltBytes!,
   );
 }
 
