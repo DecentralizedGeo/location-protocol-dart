@@ -84,3 +84,6 @@
 ### Issue #4 Cross-Chain UID Test Pattern
 - **Direct UID parity proof**: For cross-chain offchain attestation tests, recompute `OffchainSigner.computeOffchainUID(...)` from each `SignedOffchainAttestation` using the returned fields (`schemaUID`, `recipient`, `time`, `expirationTime`, `revocable`, `refUID`, `data`, `salt.toBytes()`) instead of relying only on `signed.uid` equality.
 - **Domain/message separation proof**: Rebuild typed-data JSON with `buildOffchainTypedDataJson(...)` for each chain and assert identical `message` maps plus different `domain.chainId` and `domain.verifyingContract`. This documents why signatures differ while UIDs stay stable.
+
+### Test Runner Setup Note
+- **Fresh checkout prerequisite**: Run `dart pub get` before `dart test` in a new environment so the `test` package binary is available to the Dart toolchain.

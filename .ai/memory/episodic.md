@@ -181,3 +181,11 @@
 - Status: COMPLETED
 - Context: Added direct regression tests proving `signOffchainWithData()` and `buildAttestCallDataWithUserData()` surface `ArgumentError` on schema/userData key mismatches. Updated `README.md`, `doc/guides/reference-api.md`, and `doc/guides/how-to-wallet-onchain-transactions.md` to expose the new aliases as discoverability helpers for runtime-defined schemas and payload maps.
 - Verification: `dart test test/eas/abi_encoder_test.dart test/eas/offchain_signer_test.dart test/eas/onchain_client_test.dart` passed with 39/39 tests.
+
+### [ID: ISSUE15_STRICT_EAS_PLAN] -> Follows [ISSUE3_ALIAS_DOCS_AND_COVERAGE]
+
+### [ID: ISSUE15_STRICT_EAS_TEST_RED] -> Follows [ID: ISSUE15_STRICT_EAS_PLAN]
+- **Date**: 2026-05-06
+- **Event**: Added Task 1 red tests for canonical preserved EAS envelope behavior
+- **Status**: COMPLETED (tests only)
+- **Context**: Rewrote `test/models/attestation_test.dart` around canonical `{ signer, sig }` JSON and added strict envelope/tamper coverage to `test/eas/offchain_signer_test.dart`. Verified the current implementation still fails because `SignedOffchainAttestation.fromJson()` / `.toJson()` are missing and `VerificationResult` does not yet expose structured `code` values.

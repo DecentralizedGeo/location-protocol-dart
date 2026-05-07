@@ -99,3 +99,8 @@
 
 ### Phase 8.1 Documentation Semantics
 - **EAS Reference Envelope vs LP Payload**: The Location Protocol payload (the 4 base fields) is completely implementation-agnostic and universally portable. EAS acts strictly as the **Reference Envelope** for EVM networks, providing EIP-712 signing and onchain anchoring. The LP payload can be wrapped safely in Solana or Filecoin native attestation services without changing its inherent data structure.
+
+### Issue #15 Strict EAS Offchain Envelope Semantics
+- **Single canonical offchain model**: `SignedOffchainAttestation` remains the only public offchain attestation type, but it should store preserved EAS envelope fields (`signer`, `domain`, `primaryType`, `types`, `message`, `signature`, `uid`) rather than a flattened derived record.
+- **Exact wire contract**: `SignedOffchainAttestation.toJson()` / `.fromJson()` should round-trip exact EAS package shape with top-level `signer` and nested `sig`.
+- **Getter-based ergonomics**: Common fields like `schemaUID`, `recipient`, `time`, `data`, and version-2 `salt` should be exposed as projections from the preserved envelope instead of through a second flat canonical model.

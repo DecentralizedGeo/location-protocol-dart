@@ -48,8 +48,47 @@ void main() {
     );
   });
 
+  Map<String, dynamic> _canonicalEnvelopeJsonFor(
+    SignedOffchainAttestation signed,
+  ) {
+    return signed.toJson();
+  }
+
+  SignedOffchainAttestation _tamperEnvelope(
+    SignedOffchainAttestation signed,
+    void Function(Map<String, dynamic> sig) mutate,
+  ) {
+    final json = _canonicalEnvelopeJsonFor(signed);
+    final sig = Map<String, dynamic>.from(json['sig'] as Map);
+    mutate(sig);
+    return SignedOffchainAttestation.fromJson({
+      'signer': json['signer'],
+      'sig': sig,
+    });
+  }
+
   group('OffchainSigner', () {
     group('signOffchainAttestation', () {
+      test('returns canonical EAS envelope JSON', () async {
+        final signed = await signer.signOffchainAttestation(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {
+            'timestamp': BigInt.from(1710000000),
+            'memo': 'shape test',
+          },
+        );
+
+        final json = signed.toJson();
+        final sig = json['sig'] as Map<String, dynamic>;
+        final message = sig['message'] as Map<String, dynamic>;
+
+        expect(json.keys.toList(), equals(['signer', 'sig']));
+        expect(json['signer'], equals(signed.signer));
+        expect(sig['primaryType'], equals('Attest'));
+        expect(message['salt'], isNotNull);
+      });
+
       test('returns a SignedOffchainAttestation with valid UID', () async {
         final signed = await signer.signOffchainAttestation(
           schema: schema,
@@ -157,6 +196,174 @@ void main() {
     });
 
     group('verifyOffchainAttestation', () {
+      test('fails when sig.uid is tampered', () async {
+        final signed = await signer.signOffchainAttestation(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {
+            'timestamp': BigInt.from(1710000000),
+            'memo': 'uid tamper',
+          },
+        );
+
+        final tampered = _tamperEnvelope(signed, (sig) {
+          sig['uid'] =
+              '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+        });
+
+        final result = signer.verifyOffchainAttestation(tampered);
+
+        expect(result.isValid, isFalse);
+        expect(result.code, equals(VerificationFailure.uidMismatch));
+      });
+
+      test('fails when sig.domain is tampered', () async {
+        final signed = await signer.signOffchainAttestation(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {
+            'timestamp': BigInt.from(1710000000),
+            'memo': 'domain tamper',
+          },
+        );
+
+        final tampered = _tamperEnvelope(signed, (sig) {
+          final domain = Map<String, dynamic>.from(
+            sig['domain'] as Map<String, dynamic>,
+          );
+          domain['chainId'] = 1;
+          sig['domain'] = domain;
+        });
+
+        final result = signer.verifyOffchainAttestation(tampered);
+
+        expect(result.isValid, isFalse);
+        expect(result.code, equals(VerificationFailure.invalidDomain));
+      });
+
+      test('fails when sig.types is tampered', () async {
+        final signed = await signer.signOffchainAttestation(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {
+            'timestamp': BigInt.from(1710000000),
+            'memo': 'types tamper',
+          },
+        );
+
+        final tampered = _tamperEnvelope(signed, (sig) {
+          final types = Map<String, dynamic>.from(
+            sig['types'] as Map<String, dynamic>,
+          );
+          final attest = List<dynamic>.from(types['Attest'] as List<dynamic>);
+          final firstField = Map<String, dynamic>.from(
+            attest.first as Map<String, dynamic>,
+          );
+          firstField['type'] = 'uint8';
+          attest[0] = firstField;
+          types['Attest'] = attest;
+          sig['types'] = types;
+        });
+
+        final result = signer.verifyOffchainAttestation(tampered);
+
+        expect(result.isValid, isFalse);
+        expect(result.code, equals(VerificationFailure.invalidTypes));
+      });
+
+      test('fails when sig.primaryType is tampered', () async {
+        final signed = await signer.signOffchainAttestation(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {
+            'timestamp': BigInt.from(1710000000),
+            'memo': 'primary type tamper',
+          },
+        );
+
+        final tampered = _tamperEnvelope(signed, (sig) {
+          sig['primaryType'] = 'Permit';
+        });
+
+        final result = signer.verifyOffchainAttestation(tampered);
+
+        expect(result.isValid, isFalse);
+        expect(result.code, equals(VerificationFailure.invalidPrimaryType));
+      });
+
+      test('fails when sig.message is tampered', () async {
+        final signed = await signer.signOffchainAttestation(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {
+            'timestamp': BigInt.from(1710000000),
+            'memo': 'message tamper',
+          },
+        );
+
+        final tampered = _tamperEnvelope(signed, (sig) {
+          final message = Map<String, dynamic>.from(
+            sig['message'] as Map<String, dynamic>,
+          );
+          message['time'] = 1710000001;
+          sig['message'] = message;
+        });
+
+        final result = signer.verifyOffchainAttestation(tampered);
+
+        expect(result.isValid, isFalse);
+        expect(result.code, equals(VerificationFailure.invalidMessage));
+      });
+
+      test('fails when sig.signature is tampered', () async {
+        final signed = await signer.signOffchainAttestation(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {
+            'timestamp': BigInt.from(1710000000),
+            'memo': 'signature tamper',
+          },
+        );
+
+        final tampered = _tamperEnvelope(signed, (sig) {
+          final signature = Map<String, dynamic>.from(
+            sig['signature'] as Map<String, dynamic>,
+          );
+          signature['r'] =
+              '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+          sig['signature'] = signature;
+        });
+
+        final result = signer.verifyOffchainAttestation(tampered);
+
+        expect(result.isValid, isFalse);
+        expect(result.code, equals(VerificationFailure.invalidSignature));
+      });
+
+      test('fails when version 2 salt is missing', () async {
+        final signed = await signer.signOffchainAttestation(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {
+            'timestamp': BigInt.from(1710000000),
+            'memo': 'salt tamper',
+          },
+        );
+
+        final tampered = _tamperEnvelope(signed, (sig) {
+          final message = Map<String, dynamic>.from(
+            sig['message'] as Map<String, dynamic>,
+          );
+          message.remove('salt');
+          sig['message'] = message;
+        });
+
+        final result = signer.verifyOffchainAttestation(tampered);
+
+        expect(result.isValid, isFalse);
+        expect(result.code, equals(VerificationFailure.invalidMessage));
+      });
+
       test('verifies a valid attestation', () async {
         final signed = await signer.signOffchainAttestation(
           schema: schema,
