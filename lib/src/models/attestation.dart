@@ -62,15 +62,17 @@ class SignedOffchainAttestation {
   /// The deterministic offchain UID.
   final String uid;
 
-  const SignedOffchainAttestation({
+  SignedOffchainAttestation({
     required this.signer,
-    required this.domain,
+    required Map<String, dynamic> domain,
     required this.primaryType,
-    required this.types,
-    required this.message,
+    required Map<String, dynamic> types,
+    required Map<String, dynamic> message,
     required this.signature,
     required this.uid,
-  });
+  })  : domain = _deepFreezeMap(domain),
+        types = _deepFreezeMap(types),
+        message = _deepFreezeMap(message);
 
   /// Creates a canonical EAS envelope from JSON.
   factory SignedOffchainAttestation.fromJson(Map<String, dynamic> json) {
@@ -93,10 +95,10 @@ class SignedOffchainAttestation {
   Map<String, dynamic> toJson() => {
         'signer': signer,
         'sig': {
-          'domain': domain,
+          'domain': _deepMutableMap(domain),
           'primaryType': primaryType,
-          'types': types,
-          'message': message,
+          'types': _deepMutableMap(types),
+          'message': _deepMutableMap(message),
           'signature': signature.toJson(),
           'uid': uid,
         },
@@ -142,7 +144,47 @@ class SignedOffchainAttestation {
   Uint8List get data => dataBytes;
 
   /// The preserved salt as bytes.
-  Uint8List get saltBytes => saltHex?.toBytes() ?? Uint8List(0);
+  Uint8List get saltBytes => (saltHex ?? EASConstants.zeroBytes32).toBytes();
+
+  static Map<String, dynamic> _deepFreezeMap(Map<String, dynamic> source) {
+    return Map.unmodifiable(
+      source.map((key, value) => MapEntry(key, _deepFreezeValue(value))),
+    );
+  }
+
+  static dynamic _deepFreezeValue(dynamic value) {
+    if (value is Map) {
+      return Map<String, dynamic>.unmodifiable({
+        for (final entry in value.entries)
+          entry.key.toString(): _deepFreezeValue(entry.value),
+      });
+    }
+
+    if (value is List) {
+      return List.unmodifiable(value.map(_deepFreezeValue));
+    }
+
+    return value;
+  }
+
+  static Map<String, dynamic> _deepMutableMap(Map<String, dynamic> source) {
+    return source.map((key, value) => MapEntry(key, _deepMutableValue(value)));
+  }
+
+  static dynamic _deepMutableValue(dynamic value) {
+    if (value is Map) {
+      return <String, dynamic>{
+        for (final entry in value.entries)
+          entry.key.toString(): _deepMutableValue(entry.value),
+      };
+    }
+
+    if (value is List) {
+      return value.map(_deepMutableValue).toList();
+    }
+
+    return value;
+  }
 }
 
 /// A record representing an on-chain attestation.

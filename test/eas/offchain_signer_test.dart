@@ -306,7 +306,7 @@ void main() {
           final message = Map<String, dynamic>.from(
             sig['message'] as Map<String, dynamic>,
           );
-          message['time'] = 1710000001;
+          message['version'] = 3;
           sig['message'] = message;
         });
 
@@ -330,8 +330,7 @@ void main() {
           final signature = Map<String, dynamic>.from(
             sig['signature'] as Map<String, dynamic>,
           );
-          signature['r'] =
-              '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+          signature['v'] = 29;
           sig['signature'] = signature;
         });
 
@@ -363,6 +362,75 @@ void main() {
 
         expect(result.isValid, isFalse);
         expect(result.code, equals(VerificationFailure.invalidMessage));
+      });
+
+      test('fails cleanly when salt encoding is malformed', () async {
+        final signed = await signer.signOffchainAttestation(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {
+            'timestamp': BigInt.from(1710000000),
+            'memo': 'bad salt encoding',
+          },
+        );
+
+        final tampered = _tamperEnvelope(signed, (sig) {
+          final message = Map<String, dynamic>.from(
+            sig['message'] as Map<String, dynamic>,
+          );
+          message['salt'] = 'not-hex';
+          sig['message'] = message;
+        });
+
+        final result = signer.verifyOffchainAttestation(tampered);
+
+        expect(result.isValid, isFalse);
+        expect(result.code, equals(VerificationFailure.invalidMessage));
+      });
+
+      test('fails cleanly when signature encoding is malformed', () async {
+        final signed = await signer.signOffchainAttestation(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {
+            'timestamp': BigInt.from(1710000000),
+            'memo': 'bad signature encoding',
+          },
+        );
+
+        final tampered = _tamperEnvelope(signed, (sig) {
+          final signature = Map<String, dynamic>.from(
+            sig['signature'] as Map<String, dynamic>,
+          );
+          signature['r'] = '0xzz';
+          sig['signature'] = signature;
+        });
+
+        final result = signer.verifyOffchainAttestation(tampered);
+
+        expect(result.isValid, isFalse);
+        expect(result.code, equals(VerificationFailure.invalidSignature));
+      });
+
+      test('fails when signer field is tampered', () async {
+        final signed = await signer.signOffchainAttestation(
+          schema: schema,
+          lpPayload: lpPayload,
+          userData: {
+            'timestamp': BigInt.from(1710000000),
+            'memo': 'signer tamper',
+          },
+        );
+
+        final tampered = SignedOffchainAttestation.fromJson({
+          ...signed.toJson(),
+          'signer': '0x000000000000000000000000000000000000dEaD',
+        });
+
+        final result = signer.verifyOffchainAttestation(tampered);
+
+        expect(result.isValid, isFalse);
+        expect(result.code, equals(VerificationFailure.signerMismatch));
       });
 
       test('verifies a valid attestation', () async {
@@ -576,6 +644,29 @@ void main() {
       },
     );
 
+    test('buildOffchainTypedDataJsonFromEnvelope normalizes string chainId', () async {
+      final signed = await signer.signOffchainAttestation(
+        schema: schema,
+        lpPayload: lpPayload,
+        userData: {'timestamp': BigInt.from(1710000000), 'memo': 'chainId'},
+      );
+
+      final json = signed.toJson();
+      final sig = Map<String, dynamic>.from(json['sig'] as Map<String, dynamic>);
+      final domain = Map<String, dynamic>.from(sig['domain'] as Map<String, dynamic>);
+      domain['chainId'] = '11155111';
+      sig['domain'] = domain;
+
+      final fromJson = SignedOffchainAttestation.fromJson({
+        'signer': json['signer'],
+        'sig': sig,
+      });
+
+      final typedData = OffchainSigner.buildOffchainTypedDataJsonFromEnvelope(fromJson);
+
+      expect((typedData['domain'] as Map<String, dynamic>)['chainId'], equals('11155111'));
+    });
+
     test(
       'computeOffchainUID matches signOffchainAttestation UID (deterministic salt)',
       () async {
@@ -605,6 +696,25 @@ void main() {
         expect(computedUID, equals(signed.uid));
       },
     );
+
+    test('computeOffchainUID matches pinned deterministic fixture', () async {
+      final deterministicSalt = Uint8List(32)
+        ..[0] = 0xAB
+        ..[1] = 0xCD;
+
+      final signed = await signer.signOffchainAttestation(
+        schema: schema,
+        lpPayload: lpPayload,
+        userData: {'timestamp': BigInt.from(1710000000), 'memo': 'UID test'},
+        time: BigInt.from(1710000000),
+        salt: deterministicSalt,
+      );
+
+      expect(
+        signed.uid,
+        equals('0x1d433596db24f913cc5c68e3f8d84cdc66629c0608639fe0db803f1538423dd6'),
+      );
+    });
 
     test(
       'offchain UID matches across chains for identical attestation payloads',
