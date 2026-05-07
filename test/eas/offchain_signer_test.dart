@@ -11,6 +11,7 @@ import 'package:location_protocol/src/eas/signer.dart';
 import 'package:location_protocol/src/eas/constants.dart';
 import 'package:location_protocol/src/models/attestation.dart';
 import 'package:location_protocol/src/models/signature.dart';
+import 'package:location_protocol/src/models/verification_result.dart';
 import 'package:location_protocol/src/utils/hex_utils.dart';
 
 void main() {
