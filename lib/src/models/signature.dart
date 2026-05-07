@@ -17,6 +17,22 @@ class EIP712Signature {
     required this.s,
   });
 
+  /// Serializes this signature to the canonical JSON shape.
+  Map<String, dynamic> toJson() => {
+        'v': v,
+        'r': r,
+        's': s,
+      };
+
+  /// Creates a signature from its canonical JSON shape.
+  factory EIP712Signature.fromJson(Map<String, dynamic> json) {
+    return EIP712Signature(
+      v: (json['v'] as num).toInt(),
+      r: json['r'] as String,
+      s: json['s'] as String,
+    );
+  }
+
   /// Parses a raw 65-byte EIP-712 signature hex string into [v], [r], [s].
   ///
   /// Wallets (MetaMask, Privy, WalletConnect) return `eth_signTypedData_v4`

@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 import 'package:blockchain_utils/blockchain_utils.dart';
 
+import '../eas/constants.dart';
+import '../utils/hex_utils.dart';
 import 'signature.dart';
 
 /// An unsigned EAS attestation — the data payload before signing.
@@ -39,56 +41,108 @@ class UnsignedAttestation {
 
 /// A signed offchain EAS attestation with EIP-712 signature.
 class SignedOffchainAttestation {
-  /// The deterministic offchain UID.
-  final String uid;
+  /// The signer's Ethereum address.
+  final String signer;
 
-  /// Schema UID.
-  final String schemaUID;
+  /// The preserved EIP-712 domain.
+  final Map<String, dynamic> domain;
 
-  /// Recipient address.
-  final String recipient;
+  /// The preserved EIP-712 primary type.
+  final String primaryType;
 
-  /// Attestation creation time (Unix seconds).
-  final BigInt time;
+  /// The preserved EIP-712 types map.
+  final Map<String, dynamic> types;
 
-  /// Expiration time (0 = never).
-  final BigInt expirationTime;
-
-  /// Whether revocable.
-  final bool revocable;
-
-  /// Reference UID.
-  final String refUID;
-
-  /// ABI-encoded data payload.
-  final Uint8List data;
-
-  /// Random salt (32 bytes, hex string).
-  final String salt;
-
-  /// Offchain attestation version.
-  final int version;
+  /// The preserved EIP-712 message payload.
+  final Map<String, dynamic> message;
 
   /// The EIP-712 signature.
   final EIP712Signature signature;
 
-  /// The signer's Ethereum address.
-  final String signer;
+  /// The deterministic offchain UID.
+  final String uid;
 
   const SignedOffchainAttestation({
-    required this.uid,
-    required this.schemaUID,
-    required this.recipient,
-    required this.time,
-    required this.expirationTime,
-    required this.revocable,
-    required this.refUID,
-    required this.data,
-    required this.salt,
-    required this.version,
-    required this.signature,
     required this.signer,
+    required this.domain,
+    required this.primaryType,
+    required this.types,
+    required this.message,
+    required this.signature,
+    required this.uid,
   });
+
+  /// Creates a canonical EAS envelope from JSON.
+  factory SignedOffchainAttestation.fromJson(Map<String, dynamic> json) {
+    final sig = Map<String, dynamic>.from(json['sig'] as Map);
+
+    return SignedOffchainAttestation(
+      signer: json['signer'] as String,
+      domain: Map<String, dynamic>.from(sig['domain'] as Map),
+      primaryType: sig['primaryType'] as String,
+      types: Map<String, dynamic>.from(sig['types'] as Map),
+      message: Map<String, dynamic>.from(sig['message'] as Map),
+      signature: EIP712Signature.fromJson(
+        Map<String, dynamic>.from(sig['signature'] as Map),
+      ),
+      uid: sig['uid'] as String,
+    );
+  }
+
+  /// Serializes this attestation to the canonical EAS package JSON shape.
+  Map<String, dynamic> toJson() => {
+        'signer': signer,
+        'sig': {
+          'domain': domain,
+          'primaryType': primaryType,
+          'types': types,
+          'message': message,
+          'signature': signature.toJson(),
+          'uid': uid,
+        },
+      };
+
+  /// The EAS schema UID from the preserved message.
+  String get schemaUID => message['schema'] as String;
+
+  /// The EAS recipient address from the preserved message.
+  String get recipient => message['recipient'] as String;
+
+  /// The attestation time from the preserved message.
+  BigInt get time => BigInt.parse(message['time'].toString());
+
+  /// The expiration time from the preserved message.
+  BigInt get expirationTime => BigInt.parse(message['expirationTime'].toString());
+
+  /// Whether the attestation is revocable.
+  bool get revocable => message['revocable'] as bool;
+
+  /// The referenced UID from the preserved message.
+  String get refUID => message['refUID'] as String;
+
+  /// The preserved offchain version.
+  int get offchainVersion => int.parse(message['version'].toString());
+
+  /// Backward-compatible alias for [offchainVersion].
+  int get version => offchainVersion;
+
+  /// The preserved salt value as a hex string, if present.
+  String? get saltHex => message['salt'] as String?;
+
+  /// Backward-compatible alias for [saltHex].
+  String get salt => saltHex ?? EASConstants.zeroBytes32;
+
+  /// The preserved ABI-encoded data as a hex string, if present.
+  String? get dataHex => message['data'] as String?;
+
+  /// The preserved ABI-encoded data as bytes.
+  Uint8List get dataBytes => dataHex?.toBytes() ?? Uint8List(0);
+
+  /// Backward-compatible alias for [dataBytes].
+  Uint8List get data => dataBytes;
+
+  /// The preserved salt as bytes.
+  Uint8List get saltBytes => saltHex?.toBytes() ?? Uint8List(0);
 }
 
 /// A record representing an on-chain attestation.
