@@ -28,7 +28,7 @@ dart run scripts/sepolia_schema_bootstrap.dart
 
 Expected inputs (from `.env` or process env):
 
-- `SEPOLIA_RPC_URL`
+- `SEPOLIA_RPC_URL` **or** `INFURA_API_KEY` **or** `ALCHEMY_API_KEY` (the script builds the URL from a bare API key if a full URL is not provided)
 - `SEPOLIA_PRIVATE_KEY`
 
 After it succeeds, copy the printed `SEPOLIA_EXISTING_SCHEMA_UID` into your `.env` and run recurring Sepolia tests:

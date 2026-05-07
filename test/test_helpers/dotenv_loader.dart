@@ -37,3 +37,31 @@ Map<String, String> loadDotEnv({String path = '.env'}) {
   }
   return env;
 }
+
+/// Resolves the Sepolia RPC URL from [env] (already parsed from `.env`).
+///
+/// Priority:
+/// 1. `SEPOLIA_RPC_URL` (explicit full URL)
+/// 2. `INFURA_API_KEY`  → `https://sepolia.infura.io/v3/<key>`
+/// 3. `ALCHEMY_API_KEY` → `https://eth-sepolia.g.alchemy.com/v2/<key>`
+/// 4. Falls back to the same keys in [Platform.environment].
+///
+/// Returns `null` when none of the above are present.
+String? resolveRpcUrl(Map<String, String> env) {
+  String? get(String key) => env[key]?.isNotEmpty == true
+      ? env[key]
+      : (Platform.environment[key]?.isNotEmpty == true
+          ? Platform.environment[key]
+          : null);
+
+  final explicit = get('SEPOLIA_RPC_URL');
+  if (explicit != null) return explicit;
+
+  final infura = get('INFURA_API_KEY');
+  if (infura != null) return 'https://sepolia.infura.io/v3/$infura';
+
+  final alchemy = get('ALCHEMY_API_KEY');
+  if (alchemy != null) return 'https://eth-sepolia.g.alchemy.com/v2/$alchemy';
+
+  return null;
+}
