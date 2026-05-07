@@ -51,4 +51,22 @@ class EIP712Signature {
       s: '0x${BytesUtils.toHexString(s).padLeft(64, '0')}',
     );
   }
+
+  /// Serializes the signature to the EAS JSON shape.
+  Map<String, dynamic> toJson() => {
+        'v': v,
+        'r': r,
+        's': s,
+      };
+
+  /// Deserializes from the EAS JSON shape.
+  ///
+  /// JSON numbers deserialize as [num] in Dart, so [v] is cast safely.
+  factory EIP712Signature.fromJson(Map<String, dynamic> json) {
+    return EIP712Signature(
+      v: (json['v'] as num).toInt(),
+      r: json['r'] as String,
+      s: json['s'] as String,
+    );
+  }
 }

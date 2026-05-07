@@ -15,6 +15,34 @@ void main() {
     });
   });
 
+  group('EIP712Signature JSON', () {
+    const sig = EIP712Signature(
+      v: 28,
+      r: '0x1111111111111111111111111111111111111111111111111111111111111111',
+      s: '0x2222222222222222222222222222222222222222222222222222222222222222',
+    );
+
+    test('toJson emits v, r, s', () {
+      final json = sig.toJson();
+      expect(json['v'], equals(28));
+      expect(json['r'], equals(sig.r));
+      expect(json['s'], equals(sig.s));
+    });
+
+    test('fromJson round-trips', () {
+      final json = sig.toJson();
+      final restored = EIP712Signature.fromJson(json);
+      expect(restored.v, equals(sig.v));
+      expect(restored.r, equals(sig.r));
+      expect(restored.s, equals(sig.s));
+    });
+
+    test('fromJson accepts num for v (JSON deserialization returns num)', () {
+      final restored = EIP712Signature.fromJson({'v': 28, 'r': sig.r, 's': sig.s});
+      expect(restored.v, equals(28));
+    });
+  });
+
   group('UnsignedAttestation', () {
     test('stores all EAS attestation fields', () {
       final att = UnsignedAttestation(
