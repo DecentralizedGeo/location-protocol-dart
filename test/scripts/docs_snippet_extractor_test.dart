@@ -205,6 +205,29 @@ void main() {
       expect(stripped, contains('void main()'));
     });
 
+    test('extractCompatibleImports strips incompatible dart: libraries only', () {
+      final code = '''
+import 'dart:io';
+import 'dart:html';
+import 'dart:isolate';
+import 'dart:math';
+import 'dart:convert';
+import 'package:foo/foo.dart';
+
+void doStuff() {}
+''';
+
+      final imports = extractCompatibleImports(code);
+      // incompatible — must be excluded
+      expect(imports, isNot(contains("import 'dart:io';")));
+      expect(imports, isNot(contains("import 'dart:html';")));
+      expect(imports, isNot(contains("import 'dart:isolate';")));
+      // compatible — must be included
+      expect(imports, contains("import 'dart:math';"));
+      expect(imports, contains("import 'dart:convert';"));
+      expect(imports, contains("import 'package:foo/foo.dart';"));
+    });
+
     test('substitutePlaceholderKeys replaces both quote styles', () {
       final code = "'YOUR_PRIVATE_KEY_HEX' and \"YOUR_PRIVATE_KEY_HEX\"";
 
@@ -244,6 +267,22 @@ final x = 1;
       expect(header, contains("import 'package:test/test.dart';"));
       expect(header, contains("import 'package:location_protocol/location_protocol.dart';"));
       expect(header, contains("import '../test_helpers/dotenv_loader.dart';"));
+    });
+
+    test('generateFileHeader includes extra imports without duplicating base imports', () {
+      final header = generateFileHeader(
+        extraImports: [
+          "import 'dart:math';",
+          "import 'package:test/test.dart';", // already in base — should not duplicate
+        ],
+      );
+
+      expect(header, contains("import 'dart:math';"));
+      // package:test/test.dart should appear exactly once
+      expect(
+        "import 'package:test/test.dart';".allMatches(header).length,
+        equals(1),
+      );
     });
 
     test('generateStandaloneTest wraps complete main snippet as async test', () {

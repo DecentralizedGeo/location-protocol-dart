@@ -9,7 +9,6 @@ library;
 import 'dart:convert';
 import 'package:test/test.dart';
 import 'package:location_protocol/location_protocol.dart';
-
 import '../test_helpers/dotenv_loader.dart';
 
 void main() {
