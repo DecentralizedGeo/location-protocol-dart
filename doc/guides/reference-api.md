@@ -33,7 +33,6 @@ classDiagram
     class OffchainSigner {
         +String signerAddress
         +fromPrivateKey() OffchainSigner
-        +buildOffchainTypedDataJson() Map
         +computeOffchainUID() String
         +signOffchainAttestation() SignedOffchainAttestation
         +signOffchainWithData() SignedOffchainAttestation
@@ -56,9 +55,14 @@ classDiagram
         +getSchema() SchemaRecord
     }
     class SignedOffchainAttestation {
-        +String uid
         +String signer
+        +Map domain
+        +String primaryType
+        +Map types
+        +Map message
         +EIP712Signature signature
+        +String uid
+        %% convenience getters: schemaUID, recipient, time, saltHex, dataHex, offchainVersion
     }
     class VerificationResult {
         +bool isValid
@@ -334,11 +338,13 @@ EIP-712 v2 offchain attestation signing and verification. No RPC connection requ
 
 **Primary constructor**
 
-`OffchainSigner({required Signer signer, required int chainId, required String easContractAddress, String easVersion = '1.0.0'})`
+`OffchainSigner({required Signer signer, required int chainId, required String easContractAddress, String? easVersion})`
+
+If `easVersion` is omitted, it is resolved automatically from `ChainConfig` using `chainId`. For known networks (Sepolia, Mainnet, Base, Arbitrum One) this is done without any RPC call. For an unknown chain ID, `easVersion` must be supplied explicitly or the constructor throws `ArgumentError`.
 
 **Factory**
 
-`OffchainSigner.fromPrivateKey({required String privateKeyHex, required int chainId, required String easContractAddress, String easVersion = '1.0.0'})` — backward-compatible convenience factory; wraps `LocalKeySigner` internally.
+`OffchainSigner.fromPrivateKey({required String privateKeyHex, required int chainId, required String easContractAddress, String? easVersion})` — backward-compatible convenience factory; wraps `LocalKeySigner` internally. The same `easVersion` resolution and `ArgumentError` behaviour applies.
 
 **Properties**
 
@@ -348,7 +354,7 @@ EIP-712 v2 offchain attestation signing and verification. No RPC connection requ
 | `signerAddress` | `String` | Delegates to `signer.address` |
 | `chainId` | `int` | Chain ID the signer is configured for |
 | `easContractAddress` | `String` | EAS contract address used in the EIP-712 domain |
-| `easVersion` | `String` | EAS version string used in the EIP-712 domain (default `"1.0.0"`) |
+| `easVersion` | `String` | EAS version string used in the EIP-712 domain. Resolved automatically from `ChainConfig` for known chain IDs; must be supplied explicitly for unknown chains |
 
 **Instance methods**
 
@@ -356,13 +362,12 @@ EIP-712 v2 offchain attestation signing and verification. No RPC connection requ
 |---|---|---|---|
 | `signOffchainAttestation({...})` | `required schema: SchemaDefinition`, `required lpPayload: LPPayload`, `required userData: Map<String, dynamic>`, `recipient: String = zeroAddress`, `time: BigInt?`, `expirationTime: BigInt?`, `refUID: String?`, `salt: Uint8List?` | `Future<SignedOffchainAttestation>` | Signs an offchain attestation using EIP-712 typed data. Generates a random salt if none provided |
 | `signOffchainWithData({...})` | `required schema: SchemaDefinition`, `required lpPayload: LPPayload`, `required userData: Map<String, dynamic>`, `recipient: String = zeroAddress`, `time: BigInt?`, `expirationTime: BigInt?`, `refUID: String?`, `salt: Uint8List?` | `Future<SignedOffchainAttestation>` | Discoverability alias for `signOffchainAttestation({...})`, intended for apps that assemble schemas and user data dynamically at runtime |
-| `verifyOffchainAttestation(SignedOffchainAttestation attestation)` | `attestation: SignedOffchainAttestation` | `VerificationResult` | Recovers the signer address and validates the UID. Synchronous |
+| `verifyOffchainAttestation(SignedOffchainAttestation attestation)` | `attestation: SignedOffchainAttestation` | `VerificationResult` | Synchronous four-check verifier. Returns on the first failure with `result.code` set to the relevant `VerificationFailure` value: (0) attestation version must be 2 → `unsupportedVersion`; (1) UID is recomputed from fields and must match the stored UID → `uidMismatch`; (2) `domain`, `primaryType`, and `types` are checked against expected EAS values (domain version taken from the attestation itself, mirroring SDK `strict=false`) → `invalidDomain` / `invalidPrimaryType` / `invalidTypes`; (3) ecRecover of the EIP-712 digest is compared to `attestation.signer` → `signerMismatch` |
 
 **Static methods**
 
 | Method | Parameters | Returns | Description |
 |---|---|---|---|
-| `buildOffchainTypedDataJson({...})` | `chainId, easContractAddress, schemaUID, recipient, time, expirationTime, revocable, refUID, data, salt, easVersion` | `Map<String, dynamic>` | Returns a JSON-safe EIP-712 typed data map. All `uint*` values are decimal strings; all `bytes*`/`address` values are `0x`-prefixed hex strings. Safe to pass to `eth_signTypedData_v4` or `Eip712TypedData.fromJson()` |
 | `computeOffchainUID({...})` | `schemaUID, recipient, time, expirationTime, revocable, refUID, data, salt` | `String` | Computes the EAS offchain UID v2 via packed keccak256. Returns a `0x`-prefixed hex string |
 
 ---
