@@ -5,3 +5,6 @@ linter:
     prefer_single_quotes: true
     prefer_final_locals: true
     avoid_print: true
+    prefer_interpolation_to_compose_strings: true
+    prefer_null_aware_operators: true
+    use_null_aware_elements: true
