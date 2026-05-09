@@ -223,6 +223,7 @@ void main() {
       expect(codes, contains(VerificationFailure.invalidPrimaryType));
       expect(codes, contains(VerificationFailure.invalidTypes));
       expect(codes, contains(VerificationFailure.missingSalt));
+      expect(codes, contains(VerificationFailure.unsupportedVersion));
       expect(codes, contains(VerificationFailure.invalidSignature));
       expect(codes, contains(VerificationFailure.signerMismatch));
     });

@@ -15,6 +15,9 @@ enum VerificationFailure {
   /// The v2 `salt` field is absent from the `message` map.
   missingSalt,
 
+  /// The attestation uses an unsupported version of the EAS offchain signedTypedStruct.
+  unsupportedVersion,
+
   /// The signer address cannot be recovered from the signature.
   invalidSignature,
 

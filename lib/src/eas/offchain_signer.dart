@@ -188,8 +188,9 @@ class OffchainSigner {
 
   /// Verifies a signed offchain attestation.
   ///
-  /// Checks UID validity, EIP-712 typed data structure (domain, primaryType,
-  /// types), and ecRecovers the signer address from the signature.
+  /// Checks offchain version, UID validity, EIP-712 typed data structure
+  /// (domain, primaryType, types), and ecRecovers the signer address from
+  /// the signature.
   ///
   /// Domain version is accepted from the attestation itself, mirroring the EAS
   /// TypeScript SDK's `strict=false` behavior. This allows attestations
@@ -198,7 +199,23 @@ class OffchainSigner {
   VerificationResult verifyOffchainAttestation(
     SignedOffchainAttestation attestation,
   ) {
-    // 1. Verify UID
+    // 1. Verify offchain signedTypedStruct version.
+    final versionValue = attestation.message['version'];
+    final versionString = versionValue == null ? null : versionValue.toString();
+    final offchainVersion = versionValue is int
+        ? versionValue
+        : int.tryParse(versionString ?? '');
+    if (offchainVersion != EASConstants.attestationVersion) {
+      return VerificationResult(
+        isValid: false,
+        recoveredAddress: '',
+        code: VerificationFailure.unsupportedVersion,
+        reason:
+            'Unsupported offchain attestation version: ${versionString ?? 'null'}; only version ${EASConstants.attestationVersion} is supported',
+      );
+    }
+
+    // 2. Verify UID
     final saltBytes = attestation.saltBytes;
     if (saltBytes == null) {
       return VerificationResult(
@@ -229,11 +246,11 @@ class OffchainSigner {
       );
     }
 
-    // 2. Validate EIP-712 typed data structure
+    // 3. Validate EIP-712 typed data structure
     final structureFailure = _verifyTypedDataStructure(attestation);
     if (structureFailure != null) return structureFailure;
 
-    // 3. Recover signer address
+    // 4. Recover signer address
     return _verifySignature(attestation);
   }
 

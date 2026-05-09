@@ -6,11 +6,13 @@ import 'package:location_protocol/src/lp/lp_payload.dart';
 import 'package:location_protocol/src/schema/schema_field.dart';
 import 'package:location_protocol/src/schema/schema_definition.dart';
 import 'package:location_protocol/src/eas/offchain_signer.dart';
+import 'package:location_protocol/src/config/chain_config.dart';
 import 'package:location_protocol/src/eas/local_key_signer.dart';
 import 'package:location_protocol/src/eas/signer.dart';
 import 'package:location_protocol/src/eas/constants.dart';
 import 'package:location_protocol/src/models/attestation.dart';
 import 'package:location_protocol/src/models/signature.dart';
+import 'package:location_protocol/src/models/verification_result.dart';
 
 void main() {
   // A well-known test private key — NEVER use in production
@@ -182,6 +184,130 @@ void main() {
           result.recoveredAddress.toLowerCase(),
           equals(signed.signer.toLowerCase()),
         );
+      });
+
+      test('returns unsupportedVersion for v1 attestations', () {
+        final v1Json = {
+          'signer': '0x1111111111111111111111111111111111111111',
+          'sig': {
+            'domain': {
+              'name': 'EAS Attestation',
+              'version': '0.26',
+              'chainId': 11155111,
+              'verifyingContract':
+                  '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+            },
+            'primaryType': 'Attest',
+            'types': {
+              'EIP712Domain': [
+                {'name': 'name', 'type': 'string'},
+                {'name': 'version', 'type': 'string'},
+                {'name': 'chainId', 'type': 'uint256'},
+                {'name': 'verifyingContract', 'type': 'address'},
+              ],
+              'Attest': [
+                {'name': 'version', 'type': 'uint16'},
+                {'name': 'schema', 'type': 'bytes32'},
+                {'name': 'recipient', 'type': 'address'},
+                {'name': 'time', 'type': 'uint64'},
+                {'name': 'expirationTime', 'type': 'uint64'},
+                {'name': 'revocable', 'type': 'bool'},
+                {'name': 'refUID', 'type': 'bytes32'},
+                {'name': 'data', 'type': 'bytes'},
+              ],
+            },
+            'message': {
+              'version': 1,
+              'schema':
+                  '0x1111111111111111111111111111111111111111111111111111111111111111',
+              'recipient':
+                  '0x0000000000000000000000000000000000000000',
+              'time': 1710000000,
+              'expirationTime': 0,
+              'revocable': true,
+              'refUID':
+                  '0x0000000000000000000000000000000000000000000000000000000000000000',
+              'data': '0x',
+            },
+            'signature': {
+              'v': 27,
+              'r':
+                  '0x1111111111111111111111111111111111111111111111111111111111111111',
+              's':
+                  '0x2222222222222222222222222222222222222222222222222222222222222222',
+            },
+            'uid':
+                '0x3333333333333333333333333333333333333333333333333333333333333333',
+          },
+        };
+
+        final v1Attestation = SignedOffchainAttestation.fromJson(v1Json);
+        final result = signer.verifyOffchainAttestation(v1Attestation);
+
+        expect(result.isValid, isFalse);
+        expect(result.code, equals(VerificationFailure.unsupportedVersion));
+      });
+
+      test('returns missingSalt for v2 attestations without salt', () {
+        final v2MissingSaltJson = {
+          'signer': '0x1111111111111111111111111111111111111111',
+          'sig': {
+            'domain': {
+              'name': 'EAS Attestation',
+              'version': '0.26',
+              'chainId': 11155111,
+              'verifyingContract':
+                  '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+            },
+            'primaryType': 'Attest',
+            'types': {
+              'EIP712Domain': [
+                {'name': 'name', 'type': 'string'},
+                {'name': 'version', 'type': 'string'},
+                {'name': 'chainId', 'type': 'uint256'},
+                {'name': 'verifyingContract', 'type': 'address'},
+              ],
+              'Attest': [
+                {'name': 'version', 'type': 'uint16'},
+                {'name': 'schema', 'type': 'bytes32'},
+                {'name': 'recipient', 'type': 'address'},
+                {'name': 'time', 'type': 'uint64'},
+                {'name': 'expirationTime', 'type': 'uint64'},
+                {'name': 'revocable', 'type': 'bool'},
+                {'name': 'refUID', 'type': 'bytes32'},
+                {'name': 'data', 'type': 'bytes'},
+              ],
+            },
+            'message': {
+              'version': 2,
+              'schema':
+                  '0x1111111111111111111111111111111111111111111111111111111111111111',
+              'recipient':
+                  '0x0000000000000000000000000000000000000000',
+              'time': 1710000000,
+              'expirationTime': 0,
+              'revocable': true,
+              'refUID':
+                  '0x0000000000000000000000000000000000000000000000000000000000000000',
+              'data': '0x',
+            },
+            'signature': {
+              'v': 27,
+              'r':
+                  '0x1111111111111111111111111111111111111111111111111111111111111111',
+              's':
+                  '0x2222222222222222222222222222222222222222222222222222222222222222',
+            },
+            'uid':
+                '0x3333333333333333333333333333333333333333333333333333333333333333',
+          },
+        };
+
+        final v2MissingSalt = SignedOffchainAttestation.fromJson(v2MissingSaltJson);
+        final result = signer.verifyOffchainAttestation(v2MissingSalt);
+
+        expect(result.isValid, isFalse);
+        expect(result.code, equals(VerificationFailure.missingSalt));
       });
 
       test(
