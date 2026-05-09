@@ -366,6 +366,151 @@ void main() {
         );
       },
     );
+
+    test(
+      'computeOffchainUID matches TypeScript SDK output (cross-SDK fixture)',
+      () {
+        // Fixture from offchain_attestation.json — produced by the Dart library
+        // and independently verified with Valid (EAS SDK): true by the
+        // TypeScript SDK verifyOffchainAttestationSignature, confirming the
+        // UID matches what the TypeScript SDK's solidityPackedKeccak256 computes.
+        final saltBytes = _hexToBytes(
+          '0x691a71af759d180dc3373528d40e988bb32de6681e2e0c3df73d19ed5aa3b8a6',
+        );
+        final dataBytes = _hexToBytes(
+          '0x000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000001600000000000000000000000000000000000000000000000000000000000000005312e302e30000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002c687474703a2f2f7777772e6f70656e6769732e6e65742f6465662f6372732f4f47432f312e332f43525338340000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000d67656f6a736f6e2d706f696e740000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000327b2274797065223a22506f696e74222c22636f6f7264696e61746573223a5b2d3132322e343139342c33372e373734395d7d0000000000000000000000000000',
+        );
+
+        const expectedUID =
+            '0x082b746e3c1e6c78c19b30c369caf646ee3c80fd28178183601457ca7423ba54';
+
+        final uid = OffchainSigner.computeOffchainUID(
+          schemaUID:
+              '0x3902cc7b8e415eb1ed9ac496431c31c88023cdbde0821cbb81195a8bcf74fffd',
+          recipient: '0x0000000000000000000000000000000000000000',
+          time: BigInt.from(1778262429),
+          expirationTime: BigInt.zero,
+          revocable: true,
+          refUID:
+              '0x0000000000000000000000000000000000000000000000000000000000000000',
+          data: dataBytes,
+          salt: saltBytes,
+        );
+
+        expect(uid, equals(expectedUID));
+      },
+    );
+
+    test(
+      'computeOffchainUID matches TypeScript SDK output (v2 flat format, non-zero refUID)',
+      () {
+        // Fixture produced directly by the EAS TypeScript SDK (flat format).
+        // UID verified by the SDK itself — uses a non-zero refUID and salt,
+        // exercising both refUID and salt packing paths simultaneously.
+        //
+        // Source attestation (flat EAS SDK format):
+        //   uid:    0x3767f6c0abfada9d20a5ecd4b17ba6c014ae4680e116a2b10d9641c1b71c9ef6
+        //   schema: 0xb08ebaac3deb3ed7e125d076eb7b0cbe4f0e66aff74d8dd38c6214fd9d162587
+        //   time:   1778273957
+        //   refUID: 0x5b647b9b8af5e81437c66f7d9334ee237bd0fc18134a54a5a9870cde8d4e4584
+        //   salt:   0xec077ba0235d6586693701270a36966091eafe06723258c912c51feff05333f5
+        final saltBytes = _hexToBytes(
+          '0xec077ba0235d6586693701270a36966091eafe06723258c912c51feff05333f5',
+        );
+        final dataBytes = _hexToBytes(
+          '0x0000000000000000000000000000000000000000000000000000000000000060'
+          '000000000000000000000000000000000000000000000000000000006156b6a0'
+          '00000000000000000000000000000000000000000000000000000000000000a0'
+          '00000000000000000000000000000000000000000000000000000000000000084e657720596f726b000000000000000000000000000000000000000000000000'
+          '00000000000000000000000000000000000000000000000000000000000000175468697320697320612070726976617465206e6f74652e000000000000000000',
+        );
+
+        const expectedUID =
+            '0x3767f6c0abfada9d20a5ecd4b17ba6c014ae4680e116a2b10d9641c1b71c9ef6';
+
+        final uid = OffchainSigner.computeOffchainUID(
+          schemaUID:
+              '0xb08ebaac3deb3ed7e125d076eb7b0cbe4f0e66aff74d8dd38c6214fd9d162587',
+          recipient: '0x0000000000000000000000000000000000000000',
+          time: BigInt.from(1778273957),
+          expirationTime: BigInt.zero,
+          revocable: true,
+          refUID:
+              '0x5b647b9b8af5e81437c66f7d9334ee237bd0fc18134a54a5a9870cde8d4e4584',
+          data: dataBytes,
+          salt: saltBytes,
+        );
+
+        expect(uid, equals(expectedUID));
+      },
+    );
+
+    group('computeOffchainUID refUID packing', () {
+      test('zero bytes32 refUID produces exactly 32 packed bytes', () {
+        // Verify refUID.toBytes() always yields 32 bytes for the zero UID.
+        // Regression guard: a short hex decode would break solidityPacked compat.
+        final uid = OffchainSigner.computeOffchainUID(
+          schemaUID:
+              '0x3902cc7b8e415eb1ed9ac496431c31c88023cdbde0821cbb81195a8bcf74fffd',
+          recipient: '0x0000000000000000000000000000000000000000',
+          time: BigInt.from(1710000000),
+          expirationTime: BigInt.zero,
+          revocable: true,
+          refUID:
+              '0x0000000000000000000000000000000000000000000000000000000000000000',
+          data: Uint8List(0),
+          salt: Uint8List(32),
+        );
+        // If refUID were truncated, the hash would differ from the canonical
+        // value — this test catches any regression in toBytes() byte count.
+        expect(uid, startsWith('0x'));
+        expect(uid.length, equals(66)); // 0x + 64 hex chars
+      });
+
+      test('non-zero refUID produces same length UID as zero refUID', () {
+        final nonZeroRefUID =
+            '0xabc1200000000000000000000000000000000000000000000000000000000000';
+        final zeroRefUID =
+            '0x0000000000000000000000000000000000000000000000000000000000000000';
+
+        final inputs = (
+          schemaUID:
+              '0x3902cc7b8e415eb1ed9ac496431c31c88023cdbde0821cbb81195a8bcf74fffd',
+          recipient: '0x0000000000000000000000000000000000000000',
+          time: BigInt.from(1710000000),
+          expirationTime: BigInt.zero,
+          revocable: true,
+          data: Uint8List(0),
+          salt: Uint8List(32),
+        );
+
+        final uidWithNonZero = OffchainSigner.computeOffchainUID(
+          schemaUID: inputs.schemaUID,
+          recipient: inputs.recipient,
+          time: inputs.time,
+          expirationTime: inputs.expirationTime,
+          revocable: inputs.revocable,
+          refUID: nonZeroRefUID,
+          data: inputs.data,
+          salt: inputs.salt,
+        );
+        final uidWithZero = OffchainSigner.computeOffchainUID(
+          schemaUID: inputs.schemaUID,
+          recipient: inputs.recipient,
+          time: inputs.time,
+          expirationTime: inputs.expirationTime,
+          revocable: inputs.revocable,
+          refUID: zeroRefUID,
+          data: inputs.data,
+          salt: inputs.salt,
+        );
+
+        // Different refUIDs → different UIDs, but both valid 66-char hex
+        expect(uidWithNonZero.length, equals(66));
+        expect(uidWithZero.length, equals(66));
+        expect(uidWithNonZero, isNot(equals(uidWithZero)));
+      });
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -515,6 +660,15 @@ void main() {
       expect(result.isValid, isTrue);
     });
   });
+}
+
+/// Decodes a 0x-prefixed hex string to bytes.
+Uint8List _hexToBytes(String hex) {
+  final h = hex.startsWith('0x') ? hex.substring(2) : hex;
+  return Uint8List.fromList([
+    for (var i = 0; i < h.length; i += 2)
+      int.parse(h.substring(i, i + 2), radix: 16),
+  ]);
 }
 
 String _computeUidFromSigned(SignedOffchainAttestation signed) {

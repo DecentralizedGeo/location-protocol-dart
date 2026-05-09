@@ -444,7 +444,8 @@ class OffchainSigner {
     packed.addAll(ByteUtils.uint16ToBytes(EASConstants.attestationVersion));
 
     // 2. schema (bytes32) - should be 32 bytes
-    packed.addAll(schemaUID.toBytes());
+    // e.g. "0x3902cc7b..." → UTF-8 encoded hex string bytes
+    packed.addAll(utf8.encode(schemaUID));
 
     // 3. recipient (address) - 20 bytes
     packed.addAll(recipient.toBytes().sublist(0, 20));
