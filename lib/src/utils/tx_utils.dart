@@ -16,7 +16,7 @@ class TxUtils {
     BigInt? value,
   }) {
     return {
-      if (from != null) 'from': from,
+      'from': ?from,
       'to': to,
       'data': '0x${BytesUtils.toHexString(data)}',
       'value': value != null ? '0x${value.toRadixString(16)}' : '0x0',

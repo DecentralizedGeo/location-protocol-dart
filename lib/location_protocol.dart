@@ -1,6 +1,6 @@
 /// Schema-agnostic Dart library implementing the Location Protocol
 /// base data model on the Ethereum Attestation Service (EAS).
-library location_protocol;
+library;
 
 // LP layer
 export 'src/lp/lp_payload.dart';

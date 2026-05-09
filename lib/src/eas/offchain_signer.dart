@@ -201,7 +201,7 @@ class OffchainSigner {
   ) {
     // 1. Verify offchain signedTypedStruct version.
     final versionValue = attestation.message['version'];
-    final versionString = versionValue == null ? null : versionValue.toString();
+    final versionString = versionValue?.toString();
     final offchainVersion = versionValue is int
         ? versionValue
         : int.tryParse(versionString ?? '');

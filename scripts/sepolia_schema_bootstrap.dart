@@ -73,17 +73,17 @@ String? _validateBootstrapEnv({
 /// Resolves the Sepolia RPC URL from explicit env var or by concatenating
 /// INFURA_API_KEY / ALCHEMY_API_KEY into their respective base URLs.
 String? _resolveRpcUrl(Map<String, String> env) {
-  String? _get(String key) => env[key] ?? Platform.environment[key];
+  String? get(String key) => env[key] ?? Platform.environment[key];
 
-  final explicit = _get('SEPOLIA_RPC_URL');
+  final explicit = get('SEPOLIA_RPC_URL');
   if (explicit != null && explicit.isNotEmpty) return explicit;
 
-  final infura = _get('INFURA_API_KEY');
+  final infura = get('INFURA_API_KEY');
   if (infura != null && infura.isNotEmpty) {
     return 'https://sepolia.infura.io/v3/$infura';
   }
 
-  final alchemy = _get('ALCHEMY_API_KEY');
+  final alchemy = get('ALCHEMY_API_KEY');
   if (alchemy != null && alchemy.isNotEmpty) {
     return 'https://eth-sepolia.g.alchemy.com/v2/$alchemy';
   }

@@ -34,20 +34,20 @@ void main() {
     });
 
     test('parses v=28 correctly', () {
-      final sig28 = validSig65.substring(0, validSig65.length - 2) + '1c';
+      final sig28 = '${validSig65.substring(0, validSig65.length - 2)}1c';
       final sig = EIP712Signature.fromHex(sig28);
       expect(sig.v, equals(28)); // 0x1c = 28
     });
 
     test('throws ArgumentError for wrong length (64 bytes)', () {
       // 64 bytes = 128 hex chars
-      final short = '0x' + 'aa' * 64;
+      final short = '0x${'aa' * 64}';
       expect(() => EIP712Signature.fromHex(short), throwsArgumentError);
     });
 
     test('throws ArgumentError for wrong length (66 bytes)', () {
       // 66 bytes = 132 hex chars
-      final long = '0x' + 'aa' * 66;
+      final long = '0x${'aa' * 66}';
       expect(() => EIP712Signature.fromHex(long), throwsArgumentError);
     });
 
@@ -57,12 +57,9 @@ void main() {
 
     test('r is padded to 64 hex chars', () {
       // Build a sig where r's first bytes are zero (testing left-pad)
-      final zeroR = '0x' +
-          '00' * 32 + // r = zero
-          'ff' * 32 + // s
-          '1b'; // v
+      final zeroR = '0x${'00' * 32}${'ff' * 32}1b'; // v
       final sig = EIP712Signature.fromHex(zeroR);
-      expect(sig.r, equals('0x' + '0' * 64));
+      expect(sig.r, equals('0x${'0' * 64}'));
     });
   });
 }
