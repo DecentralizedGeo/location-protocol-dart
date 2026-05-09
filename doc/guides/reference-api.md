@@ -556,7 +556,7 @@ A single event log entry from a transaction receipt.
 
 ## SignedOffchainAttestation
 
-The canonical preserved EAS offchain attestation envelope. Serializes to the exact shape produced by the EAS offchain SDK:
+The canonical preserved EAS offchain attestation signedTypedStruct. Serializes to the exact shape produced by the EAS offchain SDK:
 
 ```json
 {
@@ -572,7 +572,7 @@ The canonical preserved EAS offchain attestation envelope. Serializes to the exa
 }
 ```
 
-**Core Properties (EIP-712 Envelope)**
+**Core Properties (EIP-712 Typed structured data)**
 
 | Property | Type | Description |
 |---|---|---|
@@ -696,6 +696,7 @@ Result of verifying an offchain attestation signature, produced by `OffchainSign
 | `invalidPrimaryType` | The `primaryType` is not `'Attest'` |
 | `invalidTypes` | The `types` map does not match the canonical Attest field list |
 | `missingSalt` | The v2 `salt` field is absent from the `message` map |
+| `unsupportedVersion` | The attestation uses an unsupported version of the EAS offchain signedTypedStruct |
 | `invalidSignature` | The signer address cannot be recovered from the signature |
 | `signerMismatch` | The recovered signer address does not match `attestation.signer` |
 
