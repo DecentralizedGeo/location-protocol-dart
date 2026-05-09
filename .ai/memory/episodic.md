@@ -198,5 +198,12 @@
 - **Issue 3 - Deep Equality Fix**: Replaced hand-rolled logic with `DeepCollectionEquality().equals()` from `package:collection`. Kept structural/crypto verification separated.
 - **Dead Code**: Removed unused `buildOffchainTypedDataJson` static (superseded by private `_buildTypedDataJsonForSigning`).
 - **Test Coverage**: (1) `auto-wires easVersion` now expects `ArgumentError` on unknown chains + explicit override. (2) `returns unsupportedVersion for v1 attestations` (new). (3) `returns missingSalt for v2 attestations without salt` (new). (4) Attestation enum test verifies `unsupportedVersion`.
+
+### [ID: PHASE9_SCRIPT_ENV_FALLBACK] -> Follows [PHASE9_STRICT_ENVELOPE_HARDENING]
+- **Date**: 2026-05-08
+- **Event**: Updated `scripts/create_offchain_attestation.dart` to load `SEPOLIA_PRIVATE_KEY` from `.env`/process env and generate an ephemeral in-memory key when missing.
+- **Status**: COMPLETED
+- **Context**: Verified the script signs successfully with the configured `.env` key and also succeeds when `.env` is temporarily hidden and `SEPOLIA_PRIVATE_KEY` is absent.
+- **Security Note**: The generated fallback key is not persisted; it is used only for that run.
 - **Documentation**: API guide added `unsupportedVersion` row. Spec artifact documented Check 0 (version verification first, 4 checks total). Constructor docs removed fallback mention.
 - **Verification**: All 323 tests pass (85 EAS, 26 attestation, 301 integration). Branch ready for PR.

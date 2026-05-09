@@ -1,4 +1,7 @@
 .dart_tool/
 .pub-cache/
 tmp/
-.env
+.env
+
+# Ignore generated EAS offchain attestation JSON files
+*.json
