@@ -39,15 +39,15 @@ RunValidator -->|Passes| Success
 
 ---
 
-## 2. The EAS Reference Envelope
+## 2. The EAS Reference signedTypedStruct
 
-[EAS (Ethereum Attestation Service)](https://docs.attest.org/docs/core--concepts/how-eas-works) serves as the **reference envelope** for anchoring and signing Location Protocol payloads in this library. 
+[EAS (Ethereum Attestation Service)](https://docs.attest.org/docs/core--concepts/how-eas-works) serves as the **reference signedTypedStruct** for anchoring and signing Location Protocol payloads in this library.
 
 While the Location Protocol payload format itself is completely implementation-agnostic and chain-agnostic at the data layer, the signature and storage mechanisms provided by EAS are Ethereum- and EVM-specific (using secp256k1 keys, keccak256 hashing, and EIP-712 structured data).
 
-Because the payload data is independent of the EAS envelope, records you produce are natively compatible across Ethereum and other EVM networks that understand EAS. For non-EVM networks like Solana, Filecoin, or others, the LP payload remains entirely portable — you could wrap the same LP base fields in a Solana-native or Filecoin-native attestation service in the future, or treat the EAS records as external, Ethereum-verifiable artifacts referenced from those chains.
+Because the payload data is independent of the EAS signedTypedStruct, records you produce are natively compatible across Ethereum and other EVM networks that understand EAS. For non-EVM networks like Solana, Filecoin, or others, the LP payload remains entirely portable — you could wrap the same LP base fields in a Solana-native or Filecoin-native attestation service in the future, or treat the EAS records as external, Ethereum-verifiable artifacts referenced from those chains.
 
-When using EAS as the envelope, it organises attestations around *schemas*, ABI-encoded struct definitions expressed as a comma-separated string of `type name` pairs, such as `"string name,uint256 age"`, defined in a [resolver contract](https://docs.attest.org/docs/tutorials/resolver-contracts). Every schema string, combined with its resolver contract address and revocability flag, maps to a deterministic, globally unique identifier: the schema UID.
+When using EAS, attestations are built around *schemas*, ABI-encoded struct definitions expressed as a comma-separated string of `type name` pairs, such as `"string name,uint256 age"`, defined in a [resolver contract](https://docs.attest.org/docs/tutorials/resolver-contracts). Every schema string, combined with its resolver contract address and revocability flag, maps to a deterministic, globally unique identifier: the schema UID.
 
 The UID is computed as `keccak256(abi.encodePacked(schemaString, resolverAddress, revocable))`. Because the inputs are deterministic, the same schema registered on two different chains produces the same UID, and the same schema registered twice on the same chain produces the same UID. The library exposes this as `SchemaUID.compute(schema)`, which runs entirely in memory — no RPC call, no network round-trip.
 
@@ -61,7 +61,7 @@ The UID matters for more than bookkeeping. When an attestation is stored on-chai
 
 Many EAS libraries, including the Astral SDK, embed a fixed application schema at the library level. `location_protocol` deliberately does not: you define your own business fields, and the library ensures that the four LP base fields always appear automatically. The goal is to make LP compliance a structural property of any schema the library produces, rather than a convention that application code must follow.
 
-Concretely, `SchemaDefinition.toEASSchemaString()` always outputs `"string lp_version,string srs,string location_type,string location,<your fields...>"`. The LP fields are prepended in a fixed order and typed as `string`, since the LP payload is JSON-serialised before ABI encoding. Your business fields follow in the order you define them.
+Concretely, `SchemaDefinition.toEASSchemaString()` always outputs `"string lp_version,string srs,string location_type,string location,<your fields...>"`. The LP fields are prepended in a fixed order and typed as `string`, since the LP payload is JSON-serialized before ABI encoding. Your business fields follow in the order you define them.
 
 The library also enforces a conflict-free separation at construction time. If you attempt to name a business field `lp_version`, `srs`, `location_type`, or `location`, `SchemaDefinition` throws an `ArgumentError` immediately — not at signing time, not at encoding time, but the instant the object is created. This makes the error impossible to encounter in production: it surfaces during development and test, when the schema definition is first instantiated.
 
@@ -73,7 +73,7 @@ As a concrete example, a surveyor application might add three business fields: `
 
 ## 4. Offchain vs Onchain Attestations
 
-The EAS model supports a spectrum of commitment levels, from a purely local cryptographic signature to a full on-chain record. Choosing among them involves a trade-off between gas cost, portability, and the strength of the immutability guarantee. The following diagram summarises the decision:
+The EAS model supports a spectrum of commitment levels, from a purely local cryptographic signature to a full on-chain record. Choosing among them involves a trade-off between gas cost, portability, and the strength of the immutability guarantee. The following diagram summarizes the decision:
 
 ```mermaid
 flowchart TD
@@ -98,7 +98,7 @@ NeedTimestamp -->|Full on-chain| Onchain[Call EASClient.attest\nHigh gas · Stor
 
 EAS offchain attestations use EIP-712 with a domain separator that binds the signature to a specific EAS deployment. The domain includes the EIP-712 domain name (`"EAS Attestation"`), the EAS contract version, the chain ID, and the verifying contract address. A signature produced for a Sepolia deployment cannot be replayed against a mainnet deployment — even if the data is identical — because the domain separator encodes the chain ID and the contract address. The library uses `"EAS Attestation"` as `EASConstants.eip712DomainName`.
 
-The library implements offchain attestation **version 2**, which includes a 32-byte CSPRNG salt in the signed payload. The salt is included in the offchain UID derivation, which means that two attestations with identical content — same schema, same recipient, same data — will nonetheless have distinct UIDs if they were signed with different salts. This prevents UID collisions in multi-party or high-frequency scenarios where the same fact is attested independently by different actors. `EASConstants.generateSalt()` produces the salt using Dart's `Random.secure()`, which is backed by the operating system's cryptographically secure random number generator.
+The library implements offchain attestation **version 2**, which includes a 32-byte [CSPRNG salt](https://en.wikipedia.org/wiki/Cryptographically_secure_pseudorandom_number_generator) in the signed payload. The salt is included in the offchain UID derivation, which means that two attestations with identical content — same schema, same recipient, same data — will nonetheless have distinct UIDs if they were signed with different salts. This prevents UID collisions in multi-party or high-frequency scenarios where the same fact is attested independently by different actors. `EASConstants.generateSalt()` produces the salt using Dart's `Random.secure()`, which is backed by the operating system's cryptographically secure random number generator.
 
 These two operations — signing and UID derivation — use different data structures and must not be conflated. The **EIP-712 Attest struct** (what gets signed) contains nine fields: `version`, `schema`, `recipient`, `time`, `expirationTime`, `revocable`, `refUID`, `data`, and `salt`. There is no attester field in the struct; the signer identity is carried by the EIP-712 signature itself, not embedded in the signed payload.
 
@@ -112,7 +112,7 @@ The [LP Location Types spec](https://spec.decentralizedgeo.org/specification/loc
 
 `LocationValidator` ships with nine built-in types. The GeoJSON types — `geojson-point`, `geojson-line`, and `geojson-polygon` — are validated using the [geobase](https://pub.dev/packages/geobase) library, which checks structural conformance against [GeoJSON RFC 7946](https://tools.ietf.org/html/rfc7946). The `h3` type is validated against the regex `^[89ab][0-9a-f]{14}$`, which matches the H3 cell index character repertoire. The `geohash` type requires a 1–12 character string drawn from the base-32 geohash alphabet. The `wkt` type is validated by running the value through geobase's WKT parser. `address` requires a non-empty string after whitespace trimming. `coordinate-decimal+lon-lat` requires a two-element numeric list with values within valid longitude and latitude bounds. `scaledCoordinates` requires a map containing numeric keys `x`, `y`, and `scale`.
 
-Custom `location_type` values can be registered at runtime by calling `LocationValidator.register('my-type', (location) { ... })`. The supplied validator function should throw `ArgumentError` for any input that does not conform to the expected format. Once registered, the custom type participates in normal validation alongside the built-in types. This allows domain-specific formats — sensor encoding schemes, proprietary coordinate systems, application-defined payload envelopes — to be validated with the same enforcement path as standard types.
+Custom `location_type` values can be registered at runtime by calling `LocationValidator.register('my-type', (location) { ... })`. The supplied validator function should throw `ArgumentError` for any input that does not conform to the expected format. Once registered, the custom type participates in normal validation alongside the built-in types. This allows domain-specific formats — sensor encoding schemes, proprietary coordinate systems, application-defined data structures — to be validated with the same enforcement path as standard types.
 
 Built-in types cannot be overridden. Attempting to call `register()` with a name that matches one of the nine canonical types will throw an `ArgumentError` immediately. This protection exists because the LP spec defines the semantics of built-in types precisely; allowing application code to silently replace those semantics would make two validators with the same type name behave differently depending on registration order, undermining the interoperability goal.
 

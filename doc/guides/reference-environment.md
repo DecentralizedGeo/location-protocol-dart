@@ -23,7 +23,9 @@ These are the variable names used by the test suite and scripts in this reposito
 
 | Variable | Type | Required | Description |
 |---|---|---|---|
-| `SEPOLIA_RPC_URL` | URL string | Yes (for onchain) | JSON-RPC endpoint URL for the Sepolia testnet. Any EIP-1193-compatible provider works: Alchemy, Infura, QuickNode, or public endpoints. Example: `https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY` |
+| `SEPOLIA_RPC_URL` | URL string | No (if `INFURA_API_KEY` or `ALCHEMY_API_KEY` is set) | Full JSON-RPC endpoint URL for the Sepolia testnet. When set, takes priority over API-key variables. Example: `https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY` |
+| `INFURA_API_KEY` | string | No (alternative to `SEPOLIA_RPC_URL`) | Infura project API key. If `SEPOLIA_RPC_URL` is absent, scripts and tests build `https://sepolia.infura.io/v3/<key>` automatically. |
+| `ALCHEMY_API_KEY` | string | No (alternative to `SEPOLIA_RPC_URL`) | Alchemy API key. Used as fallback if both `SEPOLIA_RPC_URL` and `INFURA_API_KEY` are absent; builds `https://eth-sepolia.g.alchemy.com/v2/<key>` automatically. |
 | `SEPOLIA_PRIVATE_KEY` | `0x`-prefixed hex string, 66 chars total | Yes (for onchain) | Private key of the Ethereum account that will sign and pay gas for transactions. As used by the bootstrap scripts and test helpers, the value must start with `0x` followed by 64 hex characters (66 chars total). Example: `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`. The corresponding address must hold ETH on the target chain. **Note:** `DefaultRpcProvider(privateKeyHex:)` accepts either the `0x`-prefixed or raw 64-char form — the underlying `on_chain` library normalizes both. |
 | `SEPOLIA_EXISTING_SCHEMA_UID` | `0x`-prefixed 66-char hex | For integration tests | A previously registered schema UID on Sepolia used by the recurring integration test suite. Populated once via `scripts/sepolia_schema_bootstrap.dart`. |
 
@@ -40,8 +42,12 @@ The `scripts/sepolia_schema_bootstrap.dart` script reads `.env` and falls back t
 Example `.env` file:
 
 ```dotenv
-# Sepolia RPC endpoint (Infura or Alchemy)
-SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
+# Option A — provide a full RPC URL directly
+# SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
+
+# Option B — provide just your API key; the URL is built automatically
+INFURA_API_KEY=your_infura_key_here
+# ALCHEMY_API_KEY=your_alchemy_key_here
 
 # Test wallet private key (0x-prefixed, 66 chars total)
 SEPOLIA_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
@@ -72,7 +78,7 @@ The repo has tests tagged `sepolia` that require a live RPC connection, a funded
 dart test --tags sepolia
 ```
 
-These tests **skip automatically** if `SEPOLIA_RPC_URL`, `SEPOLIA_PRIVATE_KEY`, or `SEPOLIA_EXISTING_SCHEMA_UID` is absent — they do not fail. The `test/test_helpers/dotenv_loader.dart` helper loads `.env` from the project root.
+These tests **skip automatically** if no RPC endpoint can be resolved (`SEPOLIA_RPC_URL`, `INFURA_API_KEY`, or `ALCHEMY_API_KEY`) or if `SEPOLIA_PRIVATE_KEY` or `SEPOLIA_EXISTING_SCHEMA_UID` is absent — they do not fail. The `test/test_helpers/dotenv_loader.dart` helper loads `.env` from the project root.
 
 Tests not tagged `sepolia` run entirely offline and require no environment configuration:
 

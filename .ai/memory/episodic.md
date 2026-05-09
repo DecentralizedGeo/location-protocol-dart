@@ -175,9 +175,35 @@
 - Context: Expanded `test/eas/offchain_signer_test.dart` so the multi-chain parity test now directly recomputes `OffchainSigner.computeOffchainUID(...)` from each signed attestation and rebuilds typed-data JSON for both chains. The test now proves identical UID-driving message fields and identical recomputed UIDs across chains while showing that `domain.chainId`, `domain.verifyingContract`, typed-data digests, and signatures differ.
 - Verification: `dart test test/eas/offchain_signer_test.dart -r expanded` passed with 18/18 tests.
 
-### [ID: ISSUE3_ALIAS_DOCS_AND_COVERAGE] -> Follows [ISSUE4_UID_PARITY_TEST_REFINEMENT]
-- Date: 2026-03-26
-- Event: Closed PR review gaps for dynamic-schema helper discoverability and alias-level negative coverage
-- Status: COMPLETED
-- Context: Added direct regression tests proving `signOffchainWithData()` and `buildAttestCallDataWithUserData()` surface `ArgumentError` on schema/userData key mismatches. Updated `README.md`, `doc/guides/reference-api.md`, and `doc/guides/how-to-wallet-onchain-transactions.md` to expose the new aliases as discoverability helpers for runtime-defined schemas and payload maps.
-- Verification: `dart test test/eas/abi_encoder_test.dart test/eas/offchain_signer_test.dart test/eas/onchain_client_test.dart` passed with 39/39 tests.
+### [ID: PHASE9_CANONICAL_ENVELOPE] -> Follows [ISSUE3_ALIAS_DOCS_AND_COVERAGE]
+- **Date**: 2026-05-07
+- **Event**: Strict EAS Offchain Envelope — implementation, hardening, and review
+- **Branch**: `feat/strict-eas-offchain-envelope`
+- **Status**: COMPLETED (pending PR)
+- **Context**: Refactored `SignedOffchainAttestation` from a flat derived struct into a preserved canonical EAS envelope matching the TS SDK's `EIP712Response` shape (`signer`, `domain`, `primaryType`, `types`, `message`, `signature`, `uid`). Added `EIP712Signature.toJson/fromJson`, `VerificationFailure` enum (7 codes), and convenience getters on the model. `verifyOffchainAttestation` now validates UID, domain, primaryType, types, then ecRecovers signer.
+- **Bugs Fixed This Session**:
+  - `docs_snippets_test.dart` failed to compile: `docs_snippet_extractor.dart` `generateFileHeader()` hardcoded only `package:location_protocol` — missing `dart:convert` which the README snippet uses for `jsonEncode`. Fixed by adding `import 'dart:convert'` to the extractor header and regenerating.
+  - `sepolia_onchain_test.dart` `getAttestation` returned null immediately after `attest`: RPC load-balancing caused the read to land on an un-synced node. Fixed with retry loop (5 attempts, 3s gaps).
+- **Review Finding** (see `doc/spec/artifacts/offchain-envelope-implementation-review.md`): Implementation is correct but has 3 overengineering issues to address in a follow-on hardening pass: (1) `verifyOffchainAttestation` conflates structural validation with cryptographic verification, rejecting valid cross-tool attestations; (2) hand-rolled `_mapsDeepEqual` should be replaced with `package:collection`'s `DeepCollectionEquality`; (3) `buildOffchainTypedDataJson` static is dead code with an incomplete `message` map.
+- **Commits** (6 total on branch vs main): `feat: add toJson/fromJson to EIP712Signature`, `feat: add VerificationFailure enum and code field to VerificationResult`, `feat: redefine SignedOffchainAttestation as canonical EAS envelope`, `feat: refactor OffchainSigner to build and verify canonical EAS envelope`, `feat: update integration tests and docs for canonical envelope API`, `fix: add dart:convert to docs test header; retry getAttestation for RPC consistency`
+- **Verification**: 301/301 offline tests passing; Sepolia integration tests passing
+
+### [ID: PHASE9_STRICT_ENVELOPE_HARDENING] -> Follows [PHASE9_CANONICAL_ENVELOPE]
+- **Date**: 2026-05-08
+- **Event**: Strict EAS Offchain Envelope Hardening — Critical Fixes (3 overengineering issues)
+- **Status**: COMPLETED
+- **Context**: Applied the 3 overengineering fixes from `doc/spec/artifacts/offchain-envelope-implementation-review.md`, addressing fail-fast chain validation, v1/v2 attestation distinction, and dead code removal.
+- **Issue 1 - Fail-Fast Chain Validation**: Constructor now throws `ArgumentError` when `easVersion` is omitted and `ChainConfig.forChainId(chainId)` returns `null`. Prevents silent fallback to `'0.26'` for unknown networks. Introduced `_resolveEasVersion` static helper.
+- **Issue 2 - v1 Attestation Detection**: Added `unsupportedVersion` to `VerificationFailure` enum. `verifyOffchainAttestation` now checks `attestation.message['version']` **first (Check 0)** before salt/UID logic. Returns `unsupportedVersion` for v1; preserves `missingSalt` for malformed v2.
+- **Issue 3 - Deep Equality Fix**: Replaced hand-rolled logic with `DeepCollectionEquality().equals()` from `package:collection`. Kept structural/crypto verification separated.
+- **Dead Code**: Removed unused `buildOffchainTypedDataJson` static (superseded by private `_buildTypedDataJsonForSigning`).
+- **Test Coverage**: (1) `auto-wires easVersion` now expects `ArgumentError` on unknown chains + explicit override. (2) `returns unsupportedVersion for v1 attestations` (new). (3) `returns missingSalt for v2 attestations without salt` (new). (4) Attestation enum test verifies `unsupportedVersion`.
+
+### [ID: PHASE9_SCRIPT_ENV_FALLBACK] -> Follows [PHASE9_STRICT_ENVELOPE_HARDENING]
+- **Date**: 2026-05-08
+- **Event**: Updated `scripts/create_offchain_attestation.dart` to load `SEPOLIA_PRIVATE_KEY` from `.env`/process env and generate an ephemeral in-memory key when missing.
+- **Status**: COMPLETED
+- **Context**: Verified the script signs successfully with the configured `.env` key and also succeeds when `.env` is temporarily hidden and `SEPOLIA_PRIVATE_KEY` is absent.
+- **Security Note**: The generated fallback key is not persisted; it is used only for that run.
+- **Documentation**: API guide added `unsupportedVersion` row. Spec artifact documented Check 0 (version verification first, 4 checks total). Constructor docs removed fallback mention.
+- **Verification**: All 323 tests pass (85 EAS, 26 attestation, 301 integration). Branch ready for PR.

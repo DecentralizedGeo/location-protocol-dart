@@ -5,6 +5,7 @@
   - [Table of Contents](#table-of-contents)
   - [Purpose](#purpose)
   - [`sepolia_schema_bootstrap.dart`](#sepolia_schema_bootstrapdart)
+  - [`create_offchain_attestation.dart`](#create_offchain_attestationdart)
   - [`docs_snippet_extractor.dart`](#docs_snippet_extractordart)
     - [Test the generated file](#test-the-generated-file)
 
@@ -28,7 +29,7 @@ dart run scripts/sepolia_schema_bootstrap.dart
 
 Expected inputs (from `.env` or process env):
 
-- `SEPOLIA_RPC_URL`
+- `SEPOLIA_RPC_URL` **or** `INFURA_API_KEY` **or** `ALCHEMY_API_KEY` (the script builds the URL from a bare API key if a full URL is not provided)
 - `SEPOLIA_PRIVATE_KEY`
 
 After it succeeds, copy the printed `SEPOLIA_EXISTING_SCHEMA_UID` into your `.env` and run recurring Sepolia tests:
@@ -36,6 +37,21 @@ After it succeeds, copy the printed `SEPOLIA_EXISTING_SCHEMA_UID` into your `.en
 ```bash
 dart test --tags sepolia -r expanded
 ```
+
+## `create_offchain_attestation.dart`
+
+Creates a sample LP-only offchain attestation for Sepolia and writes the signed offchain attestation to `offchain_attestation.json`.
+
+**How to run script**
+
+```bash
+dart run scripts/create_offchain_attestation.dart
+```
+
+Expected inputs:
+
+- `SEPOLIA_PRIVATE_KEY` from `.env` or process env
+- If the key is missing, the script generates an ephemeral in-memory key for that run
 
 ## `docs_snippet_extractor.dart`
 

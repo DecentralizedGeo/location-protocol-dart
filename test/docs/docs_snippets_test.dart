@@ -6,9 +6,9 @@
 @Tags(['doc-snippets'])
 library;
 
+import 'dart:convert';
 import 'package:test/test.dart';
 import 'package:location_protocol/location_protocol.dart';
-
 import '../test_helpers/dotenv_loader.dart';
 
 void main() {
@@ -60,6 +60,7 @@ void main() {
         );
 
         // 4. Sign the attestation offchain (EIP-712 typed data, no RPC needed).
+        // snippet: offchain_sign_and_verify
         final signed = await signer.signOffchainAttestation(
           schema: schema,
           lpPayload: payload,
@@ -70,10 +71,17 @@ void main() {
           },
         );
 
-        print('UID: ${signed.uid}');
-        print('Signer: ${signed.signer}');
+        // Serialize to EAS-compatible JSON (matches the EAS offchain SDK shape exactly)
+        print(jsonEncode(signed.toJson()));
 
-        // 5. Verify the signed attestation locally.
+        // Access common fields via getters
+        print('UID:        ${signed.uid}');
+        print('Schema UID: ${signed.schemaUID}');
+        print('Signer:     ${signed.signer}');
+        print('Version:    ${signed.offchainVersion}');   // 2
+        print('Salt:       ${signed.saltHex}');
+
+        // Verify
         final result = signer.verifyOffchainAttestation(signed);
         assert(result.isValid, 'Attestation verification failed: ${result.reason}');
         print('Valid: ${result.isValid}');
@@ -180,7 +188,7 @@ void main() {
         }
       });
 
-      test('Step 2 — Define your schema and LP payload (L89)', () async {
+      test('Step 2 — Define your schema and LP payload (L98)', () async {
         if (sepoliaRpcUrl.isEmpty || sepoliaPrivateKey.isEmpty) {
           markTestSkipped('Missing SEPOLIA_RPC_URL or SEPOLIA_PRIVATE_KEY in .env');
           return;
@@ -220,7 +228,7 @@ void main() {
         }
       });
 
-      test('Step 3 — Register the schema (L111)', () async {
+      test('Step 3 — Register the schema (L120)', () async {
         if (sepoliaRpcUrl.isEmpty || sepoliaPrivateKey.isEmpty) {
           markTestSkipped('Missing SEPOLIA_RPC_URL or SEPOLIA_PRIVATE_KEY in .env');
           return;
@@ -271,7 +279,7 @@ void main() {
         }
       });
 
-      test('Step 4 — Attest onchain (L140)', () async {
+      test('Step 4 — Attest onchain (L149)', () async {
         if (sepoliaRpcUrl.isEmpty || sepoliaPrivateKey.isEmpty) {
           markTestSkipped('Missing SEPOLIA_RPC_URL or SEPOLIA_PRIVATE_KEY in .env');
           return;
@@ -337,7 +345,7 @@ void main() {
         }
       });
 
-      test('Step 5 — (Optional) Timestamp an offchain attestation (L167)', () async {
+      test('Step 5 — (Optional) Timestamp an offchain attestation (L176)', () async {
         if (sepoliaRpcUrl.isEmpty || sepoliaPrivateKey.isEmpty) {
           markTestSkipped('Missing SEPOLIA_RPC_URL or SEPOLIA_PRIVATE_KEY in .env');
           return;
@@ -595,7 +603,7 @@ void main() {
     final sepoliaRpcUrl = env['SEPOLIA_RPC_URL'] ?? '';
     final sepoliaPrivateKey = env['SEPOLIA_PRIVATE_KEY'] ?? '';
 
-    test('Chain selection (L98)', () async {
+    test('Chain selection (L104)', () async {
       if (sepoliaRpcUrl.isEmpty || sepoliaPrivateKey.isEmpty) {
         markTestSkipped('Missing SEPOLIA_RPC_URL or SEPOLIA_PRIVATE_KEY in .env');
         return;
@@ -844,7 +852,7 @@ void main() {
 
           // Inspect the full signed attestation
           print('Schema UID: ${signed.schemaUID}');
-          print('Version:    ${signed.version}');
+          print('Version:    ${signed.offchainVersion}');
           print('Revocable:  ${signed.revocable}');
           print('r: ${signed.signature.r}');
           print('s: ${signed.signature.s}');
@@ -917,7 +925,7 @@ void main() {
 
         // Step 5 — Inspect the signed attestation
         print('Schema UID: ${signed.schemaUID}');
-        print('Version:    ${signed.version}');
+        print('Version:    ${signed.offchainVersion}');
         print('Revocable:  ${signed.revocable}');
         print('r: ${signed.signature.r}');
         print('s: ${signed.signature.s}');

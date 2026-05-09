@@ -176,7 +176,7 @@ Finally, add the following after the verification:
 ```dart
   // Inspect the full signed attestation
   print('Schema UID: ${signed.schemaUID}');
-  print('Version:    ${signed.version}');
+  print('Version:    ${signed.offchainVersion}');
   print('Revocable:  ${signed.revocable}');
   print('r: ${signed.signature.r}');
   print('s: ${signed.signature.s}');
@@ -266,7 +266,7 @@ void main() async {
 
   // Step 5 — Inspect the signed attestation
   print('Schema UID: ${signed.schemaUID}');
-  print('Version:    ${signed.version}');
+  print('Version:    ${signed.offchainVersion}');
   print('Revocable:  ${signed.revocable}');
   print('r: ${signed.signature.r}');
   print('s: ${signed.signature.s}');

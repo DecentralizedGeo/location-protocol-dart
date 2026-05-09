@@ -60,12 +60,21 @@ sequenceDiagram
 import 'dart:io';
 import 'package:location_protocol/location_protocol.dart';
 
+String _resolveRpcUrl() {
+  final explicit = Platform.environment['SEPOLIA_RPC_URL'];
+  if (explicit != null && explicit.isNotEmpty) return explicit;
+  final infura = Platform.environment['INFURA_API_KEY'];
+  if (infura != null && infura.isNotEmpty) return 'https://sepolia.infura.io/v3/$infura';
+  final alchemy = Platform.environment['ALCHEMY_API_KEY'];
+  if (alchemy != null && alchemy.isNotEmpty) return 'https://eth-sepolia.g.alchemy.com/v2/$alchemy';
+  throw Exception('Set SEPOLIA_RPC_URL, INFURA_API_KEY, or ALCHEMY_API_KEY');
+}
+
 void main() async {
   // Load from environment variables — never hard-code credentials
-  final rpcUrl = Platform.environment['EAS_RPC_URL']
-      ?? (throw Exception('EAS_RPC_URL not set'));
-  final privateKey = Platform.environment['EAS_PRIVATE_KEY']
-      ?? (throw Exception('EAS_PRIVATE_KEY not set'));
+  final rpcUrl = _resolveRpcUrl();
+  final privateKey = Platform.environment['SEPOLIA_PRIVATE_KEY']
+      ?? (throw Exception('SEPOLIA_PRIVATE_KEY not set'));
 
   const chainId = 11155111; // Sepolia
 

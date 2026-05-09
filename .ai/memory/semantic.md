@@ -97,5 +97,18 @@
 - **`EASClient.buildAttestCallDataWithUserData`**: Discoverability alias for `buildAttestCallData`, intended for wallet/onchain flows built from runtime-defined schemas and payload maps.
 - **Validation surface**: Both aliases preserve the same `AbiEncoder` key-validation boundary and therefore surface `ArgumentError` on missing, extra, or mismatched user-data keys.
 
+### Phase 9 Canonical EAS Envelope Semantics (Updated 2026-05-08)
+- **`SignedOffchainAttestation` shape**: Canonical EAS envelope with: `signer`, `domain`, `primaryType`, `types`, `message`, `signature`, `uid`.
+- **Integer storage contract**: `chainId` in `domain` is `int`. `time`/`expirationTime`/`version` in `message` are `BigInt`/`int` (NOT strings). Strings only transiently in `_buildTypedDataJsonForSigning`.
+- **`VerificationFailure` enum (8 values — UPDATED)**: `missingSalt`, `uidMismatch`, `invalidDomain`, `invalidPrimaryType`, `invalidTypes`, **`unsupportedVersion`** (NEW), `invalidSignature`, `signerMismatch`.
+- **Verification sequence (4 checks — UPDATED)**:
+  - **Check 0 (NEW)**: Offchain envelope version. Returns `unsupportedVersion` if `message['version'] != 2`. Runs **before all others**.
+  - **Check 1**: UID integrity (recompute, compare).
+  - **Check 2**: EIP-712 structure (domain, primaryType, types via `DeepCollectionEquality`).
+  - **Check 3**: Cryptographic recovery + signer address comparison.
+- **Constructor validation (UPDATED)**: `OffchainSigner({required Signer, required int chainId, required String easVersion?})` throws `ArgumentError` if `easVersion` null AND `ChainConfig.forChainId(chainId)` null. No silent fallback.
+- **Distinction semantics**: v1 attestations return `unsupportedVersion` (explicit semantic); v2 truly missing salt return `missingSalt` (structural defect).
+- **Deep equality fix**: `const _deepEq = DeepCollectionEquality()` from `package:collection` replaces hand-rolled comparison.
+
 ### Phase 8.1 Documentation Semantics
 - **EAS Reference Envelope vs LP Payload**: The Location Protocol payload (the 4 base fields) is completely implementation-agnostic and universally portable. EAS acts strictly as the **Reference Envelope** for EVM networks, providing EIP-712 signing and onchain anchoring. The LP payload can be wrapped safely in Solana or Filecoin native attestation services without changing its inherent data structure.
