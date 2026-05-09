@@ -78,6 +78,9 @@
 - **`buildAttestTxRequest` value encoding**: Always encode the ETH value as a `0x`-prefixed hex string (`BigInt.toRadixString(16)`), not decimal. Default is `'0x0'`.
 - **`from` key conditional inclusion**: In `buildAttestTxRequest`, include `from` ONLY if provided using Dart's conditional map entry syntax (`if (from != null) 'from': from`). Wallet SDKs that infer `from` from the connected wallet will fail if an explicit `null` string is passed.
 
+### Phase 8.1 Documentation Patterns
+- **Conceptual Separation in Docs**: When describing the library or its capabilities, explicitly maintain the conceptual separation between the portable Location Protocol payload and the EVM-specific EAS envelope. Do not conflate the portability of the payload with the EVM-bound nature of the EAS signature.
+
 ### Phase 9 Canonical Envelope Patterns
 - **`docs_snippet_extractor.dart` import fragility**: `generateFileHeader()` owns the fixed import list. Any snippet using a package not in the barrel (e.g. `dart:convert`, `dart:io`) will silently strip the import and fail at test load time. Fix: add all commonly-used non-barrel imports to `generateFileHeader()`, or scan extracted snippets for imports and pass them through.
 - **RPC read-after-write consistency**: After `waitForReceipt`, a follow-up `eth_call`/`getAttestation` may return null or stale state on load-balanced RPC endpoints (Alchemy/Infura). Pattern: retry up to N times with a short sleep (`Future.delayed(const Duration(seconds: 3))`) before asserting. 5 attempts covers all observed cases on Sepolia.
@@ -85,9 +88,11 @@
 - **Verification domain-version fix + decomposition** (planned): Keep `verifyOffchainAttestation` as the public method name (mirrors SDK's `verifyOffchainAttestationSignature`). Fix domain version strictness: use `attestation.domain['version']` instead of `easVersion` when building the expected domain for comparison, mirroring SDK `strict=false`. Decompose internal logic into `_verifyTypedDataStructure` (domain + primaryType + types checks, mirrors SDK's `verifyTypedDataRequestSignature` structural half) and `_verifySignature` (ecRecover + address compare, mirrors its cryptographic half).
 - **Dead static removal**: `buildOffchainTypedDataJson` static on `OffchainSigner` is unused (superseded by private `_buildTypedDataJsonForSigning`) and has an incomplete `message` map. Remove before any pub.dev release.
 
-### Phase 8.1 Documentation Patterns
-- **Conceptual Separation in Docs**: When describing the library or its capabilities, explicitly maintain the conceptual separation between the portable Location Protocol payload and the EVM-specific EAS envelope. Do not conflate the portability of the payload with the EVM-bound nature of the EAS signature.
-
-### Issue #4 Cross-Chain UID Test Pattern
-- **Direct UID parity proof**: For cross-chain offchain attestation tests, recompute `OffchainSigner.computeOffchainUID(...)` from each `SignedOffchainAttestation` using the returned fields (`schemaUID`, `recipient`, `time`, `expirationTime`, `revocable`, `refUID`, `data`, `salt.toBytes()`) instead of relying only on `signed.uid` equality.
-- **Domain/message separation proof**: Rebuild typed-data JSON with `buildOffchainTypedDataJson(...)` for each chain and assert identical `message` maps plus different `domain.chainId` and `domain.verifyingContract`. This documents why signatures differ while UIDs stay stable.
+### Phase 9.1 Strict Envelope Verification Patterns (NEW - 2026-05-08)
+- **Fail-fast chainId validation**: `_resolveEasVersion(chainId)` static throws `ArgumentError.value(chainId, 'chainId', 'Unsupported chain...')` if chain unknown. Always test known chains first (11155111 Sepolia), provide explicit `easVersion` for custom/unknown chains.
+- **Version-first verification**: `verifyOffchainAttestation` runs 4 checks in order: (0) offchain version, (1) UID integrity, (2) EIP-712 structure, (3) crypto recovery. Ensures v1 rejected **before** salt/UID logic.
+- **Version detection**: Extract `attestation.message['version']` as `int` or parse as string via `int.tryParse`. Compare to `EASConstants.attestationVersion` (2). Return `unsupportedVersion` if mismatch.
+- **v1 rejection test**: Minimal v1 fixture (no `salt` in message, `version: 1`). Assert `result.code == VerificationFailure.unsupportedVersion`.
+- **v2 missingSalt test**: v2 fixture (`version: 2`, no `salt`). Assert `result.code == VerificationFailure.missingSalt`.
+- **ChainConfig guardrail**: Always check `ChainConfig.forChainId(chainId) != null` before `OffchainSigner()` without `easVersion`. If null, provide explicit version or fail with clear message.
+- **Deep equality replacement**: Use `const _deepEq = DeepCollectionEquality()` from `package:collection` for all map/list structural comparisons.

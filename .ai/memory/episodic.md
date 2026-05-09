@@ -188,9 +188,15 @@
 - **Commits** (6 total on branch vs main): `feat: add toJson/fromJson to EIP712Signature`, `feat: add VerificationFailure enum and code field to VerificationResult`, `feat: redefine SignedOffchainAttestation as canonical EAS envelope`, `feat: refactor OffchainSigner to build and verify canonical EAS envelope`, `feat: update integration tests and docs for canonical envelope API`, `fix: add dart:convert to docs test header; retry getAttestation for RPC consistency`
 - **Verification**: 301/301 offline tests passing; Sepolia integration tests passing
 
-### [ID: ISSUE3_ALIAS_DOCS_AND_COVERAGE] -> Follows [ISSUE4_UID_PARITY_TEST_REFINEMENT]
-- Date: 2026-03-26
-- Event: Closed PR review gaps for dynamic-schema helper discoverability and alias-level negative coverage
-- Status: COMPLETED
-- Context: Added direct regression tests proving `signOffchainWithData()` and `buildAttestCallDataWithUserData()` surface `ArgumentError` on schema/userData key mismatches. Updated `README.md`, `doc/guides/reference-api.md`, and `doc/guides/how-to-wallet-onchain-transactions.md` to expose the new aliases as discoverability helpers for runtime-defined schemas and payload maps.
-- Verification: `dart test test/eas/abi_encoder_test.dart test/eas/offchain_signer_test.dart test/eas/onchain_client_test.dart` passed with 39/39 tests.
+### [ID: PHASE9_STRICT_ENVELOPE_HARDENING] -> Follows [PHASE9_CANONICAL_ENVELOPE]
+- **Date**: 2026-05-08
+- **Event**: Strict EAS Offchain Envelope Hardening — Critical Fixes (3 overengineering issues)
+- **Status**: COMPLETED
+- **Context**: Applied the 3 overengineering fixes from `doc/spec/artifacts/offchain-envelope-implementation-review.md`, addressing fail-fast chain validation, v1/v2 attestation distinction, and dead code removal.
+- **Issue 1 - Fail-Fast Chain Validation**: Constructor now throws `ArgumentError` when `easVersion` is omitted and `ChainConfig.forChainId(chainId)` returns `null`. Prevents silent fallback to `'0.26'` for unknown networks. Introduced `_resolveEasVersion` static helper.
+- **Issue 2 - v1 Attestation Detection**: Added `unsupportedVersion` to `VerificationFailure` enum. `verifyOffchainAttestation` now checks `attestation.message['version']` **first (Check 0)** before salt/UID logic. Returns `unsupportedVersion` for v1; preserves `missingSalt` for malformed v2.
+- **Issue 3 - Deep Equality Fix**: Replaced hand-rolled logic with `DeepCollectionEquality().equals()` from `package:collection`. Kept structural/crypto verification separated.
+- **Dead Code**: Removed unused `buildOffchainTypedDataJson` static (superseded by private `_buildTypedDataJsonForSigning`).
+- **Test Coverage**: (1) `auto-wires easVersion` now expects `ArgumentError` on unknown chains + explicit override. (2) `returns unsupportedVersion for v1 attestations` (new). (3) `returns missingSalt for v2 attestations without salt` (new). (4) Attestation enum test verifies `unsupportedVersion`.
+- **Documentation**: API guide added `unsupportedVersion` row. Spec artifact documented Check 0 (version verification first, 4 checks total). Constructor docs removed fallback mention.
+- **Verification**: All 323 tests pass (85 EAS, 26 attestation, 301 integration). Branch ready for PR.

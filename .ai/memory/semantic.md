@@ -97,13 +97,18 @@
 - **`EASClient.buildAttestCallDataWithUserData`**: Discoverability alias for `buildAttestCallData`, intended for wallet/onchain flows built from runtime-defined schemas and payload maps.
 - **Validation surface**: Both aliases preserve the same `AbiEncoder` key-validation boundary and therefore surface `ArgumentError` on missing, extra, or mismatched user-data keys.
 
-### Phase 9 Canonical EAS Envelope Semantics
-- **`SignedOffchainAttestation` shape**: Now a preserved canonical EAS envelope. Fields: `signer` (address string), `domain` (Map), `primaryType` ('Attest'), `types` (Map with EIP712Domain + Attest arrays), `message` (Map with version int, schema bytes32 hex, recipient, time BigInt, expirationTime BigInt, revocable bool, refUID bytes32 hex, data 0x-hex, salt 0x-hex), `signature` (EIP712Signature), `uid` (bytes32 hex).
-- **Integer storage contract**: `chainId` in `domain` is stored as `int`. `time`/`expirationTime`/`version` in `message` are stored as `BigInt`/`int` — NOT strings. Strings are only used transiently in `_buildTypedDataJsonForSigning` for `on_chain` v8 compatibility.
-- **`EIP712Signature.toJson/fromJson`**: Serializes to `{v: int, r: '0x...', s: '0x...'}`. `fromJson` casts `v` via `.toInt()` since JSON numbers deserialize as `num`.
-- **`VerificationFailure` enum (7 values)**: `missingSalt`, `uidMismatch`, `invalidDomain`, `invalidPrimaryType`, `invalidTypes`, `invalidSignature`, `signerMismatch`. Carried on `VerificationResult.code` (nullable — null on success).
-- **Convenience getters on `SignedOffchainAttestation`**: `schemaUID`, `recipient`, `time`, `expirationTime`, `revocable`, `refUID`, `offchainVersion`, `saltHex`, `saltBytes`, `dataHex`, `dataBytes`.
-- **Known overengineering** (to resolve in hardening pass): `verifyOffchainAttestation` checks domain/primaryType/types maps against library-internal constants — this rejects valid cross-tool attestations. Should be split into `verifySignature` (ecRecover only) + optional `validateEnvelope`. See `doc/spec/artifacts/offchain-envelope-implementation-review.md`.
+### Phase 9 Canonical EAS Envelope Semantics (Updated 2026-05-08)
+- **`SignedOffchainAttestation` shape**: Canonical EAS envelope with: `signer`, `domain`, `primaryType`, `types`, `message`, `signature`, `uid`.
+- **Integer storage contract**: `chainId` in `domain` is `int`. `time`/`expirationTime`/`version` in `message` are `BigInt`/`int` (NOT strings). Strings only transiently in `_buildTypedDataJsonForSigning`.
+- **`VerificationFailure` enum (8 values — UPDATED)**: `missingSalt`, `uidMismatch`, `invalidDomain`, `invalidPrimaryType`, `invalidTypes`, **`unsupportedVersion`** (NEW), `invalidSignature`, `signerMismatch`.
+- **Verification sequence (4 checks — UPDATED)**:
+  - **Check 0 (NEW)**: Offchain envelope version. Returns `unsupportedVersion` if `message['version'] != 2`. Runs **before all others**.
+  - **Check 1**: UID integrity (recompute, compare).
+  - **Check 2**: EIP-712 structure (domain, primaryType, types via `DeepCollectionEquality`).
+  - **Check 3**: Cryptographic recovery + signer address comparison.
+- **Constructor validation (UPDATED)**: `OffchainSigner({required Signer, required int chainId, required String easVersion?})` throws `ArgumentError` if `easVersion` null AND `ChainConfig.forChainId(chainId)` null. No silent fallback.
+- **Distinction semantics**: v1 attestations return `unsupportedVersion` (explicit semantic); v2 truly missing salt return `missingSalt` (structural defect).
+- **Deep equality fix**: `const _deepEq = DeepCollectionEquality()` from `package:collection` replaces hand-rolled comparison.
 
 ### Phase 8.1 Documentation Semantics
 - **EAS Reference Envelope vs LP Payload**: The Location Protocol payload (the 4 base fields) is completely implementation-agnostic and universally portable. EAS acts strictly as the **Reference Envelope** for EVM networks, providing EIP-712 signing and onchain anchoring. The LP payload can be wrapped safely in Solana or Filecoin native attestation services without changing its inherent data structure.
