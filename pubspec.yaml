@@ -10,8 +10,6 @@ topics:
   - protocol
   - ethereum
   - eas
-  - geohash
-  - h3
   - verification
 
 environment:
