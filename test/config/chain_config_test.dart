@@ -27,9 +27,11 @@ void main() {
         eas: '0xCustomEAS',
         schemaRegistry: '0xCustomRegistry',
         chainName: 'My Testnet',
+        easVersion: '1.0.0',
       );
       expect(config.eas, equals('0xCustomEAS'));
       expect(config.chainName, equals('My Testnet'));
+      expect(config.easVersion, equals('1.0.0'));
     });
 
     test('supportedChainIds returns known chain IDs', () {
@@ -86,6 +88,63 @@ void main() {
         expect(config.schemaRegistry, startsWith('0x'), reason: 'Bad registry address for ${entry.value}');
         expect(config.chainName, equals(entry.value), reason: 'Wrong chainName for chain ${entry.key}');
       }
+    });
+
+    group('easVersion', () {
+      test('Sepolia is 0.26', () {
+        expect(ChainConfig.forChainId(11155111)!.easVersion, equals('0.26'));
+      });
+
+      test('Ethereum Mainnet is 0.26', () {
+        expect(ChainConfig.forChainId(1)!.easVersion, equals('0.26'));
+      });
+
+      test('Arbitrum One is 0.26', () {
+        expect(ChainConfig.forChainId(42161)!.easVersion, equals('0.26'));
+      });
+
+      test('Optimism is 1.0.1', () {
+        expect(ChainConfig.forChainId(10)!.easVersion, equals('1.0.1'));
+      });
+
+      test('Base is 1.0.1', () {
+        expect(ChainConfig.forChainId(8453)!.easVersion, equals('1.0.1'));
+      });
+
+      test('Optimism Sepolia is 1.0.2', () {
+        expect(ChainConfig.forChainId(11155420)!.easVersion, equals('1.0.2'));
+      });
+
+      test('Linea is 1.2.0', () {
+        expect(ChainConfig.forChainId(59144)!.easVersion, equals('1.2.0'));
+      });
+
+      test('Base Sepolia is 1.2.0', () {
+        expect(ChainConfig.forChainId(84532)!.easVersion, equals('1.2.0'));
+      });
+
+      test('Polygon is 1.3.0', () {
+        expect(ChainConfig.forChainId(137)!.easVersion, equals('1.3.0'));
+      });
+
+      test('Telos is 1.4.0', () {
+        expect(ChainConfig.forChainId(40)!.easVersion, equals('1.4.0'));
+      });
+
+      test('Unichain is 1.4.1-beta.1', () {
+        expect(ChainConfig.forChainId(130)!.easVersion, equals('1.4.1-beta.1'));
+      });
+
+      test('all supported chains have a non-empty easVersion', () {
+        for (final chainId in ChainConfig.supportedChainIds) {
+          final config = ChainConfig.forChainId(chainId)!;
+          expect(
+            config.easVersion,
+            isNotEmpty,
+            reason: 'easVersion is empty for chain $chainId (${config.chainName})',
+          );
+        }
+      });
     });
   });
 }
