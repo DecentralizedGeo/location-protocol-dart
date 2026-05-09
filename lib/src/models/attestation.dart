@@ -38,7 +38,7 @@ class UnsignedAttestation {
   });
 }
 
-/// A signed offchain EAS attestation in the canonical EAS envelope format.
+/// A signed typed data struct for offchain EAS attestations in.
 ///
 /// This is the exact JSON shape produced by the EAS offchain SDK:
 /// ```json
@@ -99,7 +99,7 @@ class SignedOffchainAttestation {
   // Serialization
   // ---------------------------------------------------------------------------
 
-  /// Deserializes from the canonical EAS offchain JSON envelope.
+  /// Deserializes from the canonical EAS offchain JSON.
   factory SignedOffchainAttestation.fromJson(Map<String, dynamic> json) {
     final sig = json['sig'] as Map<String, dynamic>;
     return SignedOffchainAttestation(
@@ -113,7 +113,7 @@ class SignedOffchainAttestation {
     );
   }
 
-  /// Serializes to the canonical EAS offchain JSON envelope.
+  /// Serializes to the canonical EAS offchain JSON.
   Map<String, dynamic> toJson() => {
         'signer': signer,
         'sig': {

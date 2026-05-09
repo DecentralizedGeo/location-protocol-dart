@@ -106,7 +106,7 @@ class OffchainSigner {
     // 2. Compute schema UID
     final schemaUID = SchemaUID.compute(schema);
 
-    // 3. Build canonical envelope maps (preserved in the attestation)
+    // 3. Build canonical signedTypedStruct maps (preserved in the attestation)
     // Use _expectedDomain() and _canonicalTypes() to ensure consistency
     final domain = _expectedDomain();
     final types = _canonicalTypes();
