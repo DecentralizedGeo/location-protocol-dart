@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:on_chain/on_chain.dart';
 import 'package:blockchain_utils/blockchain_utils.dart';
 
+import '../config/chain_config.dart';
 import '../lp/lp_payload.dart';
 import '../schema/schema_definition.dart';
 import '../schema/schema_uid.dart';
@@ -40,22 +42,30 @@ class OffchainSigner {
   /// For wallet-backed signing, pass a custom [Signer] implementation that
   /// calls `eth_signTypedData_v4`. For local key signing, prefer
   /// [OffchainSigner.fromPrivateKey].
+  ///
+  /// If [easVersion] is not supplied, it is resolved automatically from
+  /// [ChainConfig] using [chainId]. Unsupported chains must supply
+  /// [easVersion] explicitly.
   OffchainSigner({
     required this.signer,
     required this.chainId,
     required this.easContractAddress,
-    this.easVersion = '1.0.0',
-  });
+    String? easVersion,
+  }) : easVersion = easVersion ?? _resolveEasVersion(chainId);
 
   /// Convenience factory for local private key signing (backward compatible).
   ///
   /// Wraps [privateKeyHex] in a [LocalKeySigner] and delegates to the primary
   /// constructor. This preserves backward compatibility with existing code.
+  ///
+  /// If [easVersion] is not supplied, it is resolved automatically from
+  /// [ChainConfig] using [chainId]. Unsupported chains must supply
+  /// [easVersion] explicitly.
   factory OffchainSigner.fromPrivateKey({
     required String privateKeyHex,
     required int chainId,
     required String easContractAddress,
-    String easVersion = '1.0.0',
+    String? easVersion,
   }) {
     return OffchainSigner(
       signer: LocalKeySigner(privateKeyHex: privateKeyHex),
@@ -335,9 +345,21 @@ class OffchainSigner {
   // Private helpers
   // ---------------------------------------------------------------------------
 
+  static String _resolveEasVersion(int chainId) {
+    final config = ChainConfig.forChainId(chainId);
+    if (config == null) {
+      throw ArgumentError.value(
+        chainId,
+        'chainId',
+        'Unsupported chain. Provide easVersion explicitly for unknown chain IDs.',
+      );
+    }
+    return config.easVersion;
+  }
+
   /// Builds the transient EIP-712 JSON request for wallet signing.
   ///
-  /// Converts canonical envelope maps (where integers are stored as [int] or
+  /// Converts canonical signedTypedStruct maps (where integers are stored as [int] or
   /// [BigInt]) into wallet-compatible format with decimal string integers.
   /// This is required by the `on_chain` package v8 which calls
   /// `valueAsBigInt(allowHex: false)` for numeric types.

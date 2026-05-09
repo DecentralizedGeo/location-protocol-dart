@@ -385,6 +385,66 @@ void main() {
       );
     });
 
+    test('auto-wires easVersion from ChainConfig when not supplied', () {
+      // Chain 11155111 (Sepolia) → easVersion = '0.26'
+      final sepoliaNoVersion = OffchainSigner.fromPrivateKey(
+        privateKeyHex: testPrivateKeyHex,
+        chainId: 11155111,
+        easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+      );
+      expect(sepoliaNoVersion.easVersion, equals('0.26'));
+      expect(
+        sepoliaNoVersion.easVersion,
+        equals(ChainConfig.forChainId(11155111)!.easVersion),
+      );
+
+      // Chain 10 (Optimism) → easVersion = '1.0.1'
+      final optimism = OffchainSigner.fromPrivateKey(
+        privateKeyHex: testPrivateKeyHex,
+        chainId: 10,
+        easContractAddress: '0x4200000000000000000000000000000000000021',
+      );
+      expect(optimism.easVersion, equals('1.0.1'));
+
+      // Chain 84532 (Base Sepolia) → easVersion = '1.2.0'
+      final baseSepolia = OffchainSigner.fromPrivateKey(
+        privateKeyHex: testPrivateKeyHex,
+        chainId: 84532,
+        easContractAddress: '0x4200000000000000000000000000000000000021',
+      );
+      expect(baseSepolia.easVersion, equals('1.2.0'));
+
+      // Unknown chain must now fail fast unless easVersion is supplied.
+      expect(
+        () => OffchainSigner.fromPrivateKey(
+          privateKeyHex: testPrivateKeyHex,
+          chainId: 999999,
+          easContractAddress: '0xUnknown',
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+
+      // Explicit version override is still allowed for unsupported chains.
+      final unknownWithVersion = OffchainSigner.fromPrivateKey(
+        privateKeyHex: testPrivateKeyHex,
+        chainId: 999999,
+        easContractAddress: '0xUnknown',
+        easVersion: '1.4.0',
+      );
+      expect(unknownWithVersion.easVersion, equals('1.4.0'));
+    });
+
+    test('explicit easVersion overrides ChainConfig lookup', () {
+      // Sepolia would normally be '0.26', but explicit override wins
+      final s = OffchainSigner.fromPrivateKey(
+        privateKeyHex: testPrivateKeyHex,
+        chainId: 11155111,
+        easContractAddress: '0xC2679fBD37d54388Ce493F1DB75320D236e1815e',
+        easVersion: '1.4.0',
+      );
+      expect(s.easVersion, equals('1.4.0'));
+    });
+
     test(
       'primary constructor + fromPrivateKey produce identical attestations',
       () async {
