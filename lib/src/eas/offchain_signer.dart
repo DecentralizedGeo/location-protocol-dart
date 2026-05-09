@@ -323,7 +323,6 @@ class OffchainSigner {
       ...s,
       v,
     ];
-
     final recoveredPubKey = ETHPublicKey.getPublicKey(
       hash,
       sigBytes,
